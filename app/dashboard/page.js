@@ -7,32 +7,32 @@ export default function DashboardPage() {
   const [songTitle, setSongTitle] = useState("");
   const [artistName, setArtistName] = useState("");
   const [songLink, setSongLink] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
 
-    try {
-      const { error } = await supabase.from("songs").insert([
-        {
-          song_title: songTitle,
-          artist_name: artistName,
-          song_link: songLink,
-        },
-      ]);
+    const { error } = await supabase.from("songs").insert([
+      {
+        song_title: songTitle,
+        artist_name: artistName,
+        song_link: songLink,
+      },
+    ]);
 
-      if (error) {
-        alert("Error saving song");
-        console.log(error);
-      } else {
-        alert("Song saved successfully!");
-        setSongTitle("");
-        setArtistName("");
-        setSongLink("");
-      }
-    } catch (err) {
-      console.log("Unexpected error:", err);
-      alert("Something went wrong");
+    setSaving(false);
+
+    if (error) {
+      alert(error.message);
+      console.log(error);
+      return;
     }
+
+    alert("Song saved successfully!");
+    setSongTitle("");
+    setArtistName("");
+    setSongLink("");
   };
 
   return (
@@ -49,6 +49,7 @@ export default function DashboardPage() {
             value={songTitle}
             onChange={(e) => setSongTitle(e.target.value)}
             style={{ padding: "10px", margin: "10px", width: "80%" }}
+            required
           />
 
           <input
@@ -57,6 +58,7 @@ export default function DashboardPage() {
             value={artistName}
             onChange={(e) => setArtistName(e.target.value)}
             style={{ padding: "10px", margin: "10px", width: "80%" }}
+            required
           />
 
           <input
@@ -65,12 +67,13 @@ export default function DashboardPage() {
             value={songLink}
             onChange={(e) => setSongLink(e.target.value)}
             style={{ padding: "10px", margin: "10px", width: "80%" }}
+            required
           />
 
           <br />
 
-          <button type="submit" className="button">
-            Save Song
+          <button type="submit" className="button" disabled={saving}>
+            {saving ? "Saving..." : "Save Song"}
           </button>
         </form>
       </section>
