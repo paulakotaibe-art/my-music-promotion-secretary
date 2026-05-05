@@ -11,22 +11,27 @@ export default function DashboardPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { data, error } = await supabase.from("songs").insert([
-      {
-        song_title: songTitle,
-        artist_name: artistName,
-        song_link: songLink,
-      },
-    ]);
+    try {
+      const { error } = await supabase.from("songs").insert([
+        {
+          song_title: songTitle,
+          artist_name: artistName,
+          song_link: songLink,
+        },
+      ]);
 
-    if (error) {
-      alert("Error saving song");
-      console.log(error);
-    } else {
-      alert("Song saved successfully!");
-      setSongTitle("");
-      setArtistName("");
-      setSongLink("");
+      if (error) {
+        alert("Error saving song");
+        console.log(error);
+      } else {
+        alert("Song saved successfully!");
+        setSongTitle("");
+        setArtistName("");
+        setSongLink("");
+      }
+    } catch (err) {
+      console.log("Unexpected error:", err);
+      alert("Something went wrong");
     }
   };
 
@@ -35,11 +40,7 @@ export default function DashboardPage() {
       <section className="hero">
         <h1>Artist Dashboard</h1>
 
-        <p>
-          Welcome to your Music Promotion Secretary dashboard.
-        </p>
-
-        <h2>Upload Your Song Details</h2>
+        <p>Upload and manage your song promotion details.</p>
 
         <form onSubmit={handleSubmit}>
           <input
