@@ -11,6 +11,12 @@ export default function DashboardPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!supabase) {
+      alert("Supabase is not connected. Check Vercel environment variables.");
+      return;
+    }
+
     setSaving(true);
 
     const { error } = await supabase.from("songs").insert([
@@ -25,7 +31,6 @@ export default function DashboardPage() {
 
     if (error) {
       alert(error.message);
-      console.log(error);
       return;
     }
 
