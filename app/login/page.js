@@ -1,13 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "../../../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
+
+    if (!supabase) {
+      alert("Supabase is not connected. Check Vercel environment variables.");
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
