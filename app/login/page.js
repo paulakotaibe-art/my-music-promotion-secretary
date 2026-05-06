@@ -40,11 +40,7 @@ export default function LoginPage() {
     <main className="container">
       <section className="hero">
         <h1>Artist Login</h1>
-
-        <p>
-          Enter your email to receive a secure login link for your Music
-          Promotion Secretary dashboard.
-        </p>
+        <p>Enter your email to receive a secure login link.</p>
 
         <form onSubmit={handleLogin}>
           <input
@@ -62,10 +58,6 @@ export default function LoginPage() {
             {sending ? "Sending..." : "Send Login Link"}
           </button>
         </form>
-
-        <p style={{ marginTop: "20px", fontSize: "14px" }}>
-          Beta access for artists and music creators.
-        </p>
       </section>
     </main>
   );
