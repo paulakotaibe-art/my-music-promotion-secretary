@@ -1,53 +1,24 @@
-"use client";
-
-import { useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
-
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-
-    if (!supabase) {
-      alert("Supabase is not connected. Check Vercel environment variables.");
-      return;
-    }
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-    });
-
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Check your email for login link!");
-    }
-  };
-
+export default function Home() {
   return (
     <main className="container">
       <section className="hero">
-        <h1>Artist Login</h1>
+        <h1>My Music Promotion Secretary</h1>
 
-        <p>Login securely to access your music promotion dashboard.</p>
+        <p>
+          A smart SaaS platform helping artists upload songs, manage music
+          promotion, prepare campaigns, and automate their music marketing.
+        </p>
 
-        <form onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ padding: "10px", margin: "10px", width: "80%" }}
-            required
-          />
+        <a className="button" href="/login">
+          Artist Login
+        </a>
 
-          <br />
+        <br />
+        <br />
 
-          <button type="submit" className="button">
-            Send Login Link
-          </button>
-        </form>
+        <a className="button" href="/dashboard">
+          Go to Dashboard
+        </a>
       </section>
     </main>
   );
