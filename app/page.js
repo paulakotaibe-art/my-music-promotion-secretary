@@ -1,20 +1,53 @@
-export default function Home() {
+"use client";
+
+import { useState } from "react";
+import { supabase } from "../../lib/supabaseClient";
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    if (!supabase) {
+      alert("Supabase is not connected. Check Vercel environment variables.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+    });
+
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("Check your email for login link!");
+    }
+  };
+
   return (
     <main className="container">
       <section className="hero">
-        <h1>Music Promotion Secretary</h1>
-        <p>
-          A simple digital assistant to help artists, singers, and music creators
-          promote their songs with better planning, links, messages, and campaigns.
-        </p>
+        <h1>Artist Login</h1>
 
-        <a
-          className="button"
-          href="https://gumroad.com"
-          target="_blank"
-        >
-          Get It on Gumroad
-        </a>
+        <p>Login securely to access your music promotion dashboard.</p>
+
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{ padding: "10px", margin: "10px", width: "80%" }}
+            required
+          />
+
+          <br />
+
+          <button type="submit" className="button">
+            Send Login Link
+          </button>
+        </form>
       </section>
     </main>
   );
