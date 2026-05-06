@@ -11,12 +11,14 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false);
 
   const fetchSongs = async () => {
+    if (!supabase) return;
+
     const { data, error } = await supabase
       .from("songs")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error) {
+    if (!error && data) {
       setSongs(data);
     }
   };
@@ -51,11 +53,9 @@ export default function DashboardPage() {
     }
 
     alert("Song saved successfully!");
-
     setSongTitle("");
     setArtistName("");
     setSongLink("");
-
     fetchSongs();
   };
 
@@ -63,7 +63,6 @@ export default function DashboardPage() {
     <main className="container">
       <section className="hero">
         <h1>Artist Dashboard</h1>
-
         <p>Upload and manage your song promotion details.</p>
 
         <form onSubmit={handleSubmit}>
