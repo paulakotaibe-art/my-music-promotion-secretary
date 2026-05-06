@@ -5,24 +5,35 @@ import { supabase } from "../../lib/supabaseClient";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
     if (!supabase) {
-      alert("Supabase is not connected. Check Vercel environment variables.");
+      alert("Supabase is not connected.");
       return;
     }
 
+    setSending(true);
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
+      options: {
+        emailRedirectTo:
+          "https://my-music-promotion-secretary-x96x-kgwnhtbi5.vercel.app/dashboard",
+      },
     });
+
+    setSending(false);
 
     if (error) {
       alert(error.message);
-    } else {
-      alert("Check your email for login link!");
+      return;
     }
+
+    alert("Login link sent. Please check your email.");
+    setEmail("");
   };
 
   return (
@@ -30,12 +41,15 @@ export default function LoginPage() {
       <section className="hero">
         <h1>Artist Login</h1>
 
-        <p>Login securely to access your music promotion dashboard.</p>
+        <p>
+          Enter your email to receive a secure login link for your Music
+          Promotion Secretary dashboard.
+        </p>
 
         <form onSubmit={handleLogin}>
           <input
             type="email"
-            placeholder="Enter your email"
+            placeholder="Enter your email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={{ padding: "10px", margin: "10px", width: "80%" }}
@@ -44,10 +58,14 @@ export default function LoginPage() {
 
           <br />
 
-          <button type="submit" className="button">
-            Send Login Link
+          <button type="submit" className="button" disabled={sending}>
+            {sending ? "Sending..." : "Send Login Link"}
           </button>
         </form>
+
+        <p style={{ marginTop: "20px", fontSize: "14px" }}>
+          Beta access for artists and music creators.
+        </p>
       </section>
     </main>
   );
