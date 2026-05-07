@@ -63,6 +63,7 @@ export default function DashboardPage() {
     <main className="container">
       <section className="hero">
         <h1>Artist Dashboard</h1>
+
         <p>Upload and manage your song promotion details.</p>
 
         <form onSubmit={handleSubmit}>
