@@ -40,6 +40,7 @@ export default function LoginPage() {
     <main className="container">
       <section className="hero">
         <h1>Artist Login</h1>
+
         <p>Enter your email to receive a secure login link.</p>
 
         <form onSubmit={handleLogin}>
