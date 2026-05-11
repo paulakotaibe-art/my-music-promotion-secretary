@@ -1,37 +1,59 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function DashboardPage() {
+  const router = useRouter();
+
+  const [user, setUser] = useState(null);
   const [songTitle, setSongTitle] = useState("");
   const [artistName, setArtistName] = useState("");
   const [songLink, setSongLink] = useState("");
   const [songs, setSongs] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const fetchSongs = async () => {
-    if (!supabase) return;
-
+  const fetchSongs = async (userId) => {
     const { data, error } = await supabase
       .from("songs")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setSongs(data);
-    }
+    if (!error && data) setSongs(data);
   };
 
   useEffect(() => {
-    fetchSongs();
-  }, []);
+    const protectDashboard = async () => {
+      if (!supabase) {
+        router.push("/login");
+        return;
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      setUser(user);
+      await fetchSongs(user.id);
+      setLoading(false);
+    };
+
+    protectDashboard();
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!supabase) {
-      alert("Supabase is not connected.");
+    if (!user) {
+      router.push("/login");
       return;
     }
 
@@ -39,6 +61,7 @@ export default function DashboardPage() {
 
     const { error } = await supabase.from("songs").insert([
       {
+        user_id: user.id,
         song_title: songTitle,
         artist_name: artistName,
         song_link: songLink,
@@ -56,15 +79,35 @@ export default function DashboardPage() {
     setSongTitle("");
     setArtistName("");
     setSongLink("");
-    fetchSongs();
+    fetchSongs(user.id);
   };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
+  if (loading) {
+    return (
+      <main className="container">
+        <section className="hero">
+          <h1>Loading dashboard...</h1>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="container">
       <section className="hero">
         <h1>Artist Dashboard</h1>
+        <p>Welcome, {user?.email}</p>
 
-        <p>Upload and manage your song promotion details.</p>
+        <button onClick={handleLogout} className="button">
+          Logout
+        </button>
+
+        <p>Upload and manage your own song promotion details.</p>
 
         <form onSubmit={handleSubmit}>
           <input
@@ -103,7 +146,7 @@ export default function DashboardPage() {
 
         <hr style={{ margin: "40px 0" }} />
 
-        <h2>Saved Songs</h2>
+        <h2>My Saved Songs</h2>
 
         {songs.length === 0 ? (
           <p>No songs uploaded yet.</p>
