@@ -21,7 +21,7 @@ export default function LoginPage() {
       email,
       options: {
         emailRedirectTo:
-          "https://my-music-promotion-secretary-x96x-ofmh7brc8.vercel.app/dashboard",
+          "https://my-music-promotion-secretary-x96x-5z9r6q1bj.vercel.app/dashboard",
       },
     });
 
