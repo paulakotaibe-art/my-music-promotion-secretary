@@ -59,6 +59,7 @@ export default function DashboardPage() {
     e.preventDefault();
 
     if (!user) {
+      alert("Please login again before saving your song.");
       router.push("/login");
       return;
     }
