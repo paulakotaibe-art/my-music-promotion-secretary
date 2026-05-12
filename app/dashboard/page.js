@@ -22,7 +22,12 @@ export default function DashboardPage() {
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (!error && data) setSongs(data);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setSongs(data || []);
   };
 
   useEffect(() => {
@@ -34,9 +39,10 @@ export default function DashboardPage() {
 
       const {
         data: { user },
+        error,
       } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (error || !user) {
         router.push("/login");
         return;
       }
@@ -79,7 +85,7 @@ export default function DashboardPage() {
     setSongTitle("");
     setArtistName("");
     setSongLink("");
-    fetchSongs(user.id);
+    await fetchSongs(user.id);
   };
 
   const handleLogout = async () => {
@@ -101,6 +107,7 @@ export default function DashboardPage() {
     <main className="container">
       <section className="hero">
         <h1>Artist Dashboard</h1>
+
         <p>Welcome, {user?.email}</p>
 
         <button onClick={handleLogout} className="button">
