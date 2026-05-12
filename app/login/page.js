@@ -20,8 +20,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo:
-          "https://my-music-promotion-secretary-x96x-5z9r6q1bj.vercel.app/dashboard",
+        emailRedirectTo: `${window.location.origin}/dashboard`,
       },
     });
 
