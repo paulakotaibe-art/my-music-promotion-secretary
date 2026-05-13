@@ -15,11 +15,10 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchSongs = async (userId) => {
+  const fetchSongs = async () => {
     const { data, error } = await supabase
       .from("songs")
       .select("*")
-      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -48,7 +47,7 @@ export default function DashboardPage() {
       }
 
       setUser(user);
-      await fetchSongs(user.id);
+      await fetchSongs();
       setLoading(false);
     };
 
@@ -59,7 +58,7 @@ export default function DashboardPage() {
     e.preventDefault();
 
     if (!user) {
-      alert("Please login again before saving your song.");
+      alert("Please login again.");
       router.push("/login");
       return;
     }
@@ -68,7 +67,6 @@ export default function DashboardPage() {
 
     const { error } = await supabase.from("songs").insert([
       {
-        user_id: user.id,
         song_title: songTitle,
         artist_name: artistName,
         song_link: songLink,
@@ -83,10 +81,12 @@ export default function DashboardPage() {
     }
 
     alert("Song saved successfully!");
+
     setSongTitle("");
     setArtistName("");
     setSongLink("");
-    await fetchSongs(user.id);
+
+    await fetchSongs();
   };
 
   const handleLogout = async () => {
