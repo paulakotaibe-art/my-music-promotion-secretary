@@ -15,10 +15,11 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchSongs = async () => {
+  const fetchSongs = async (userId) => {
     const { data, error } = await supabase
       .from("songs")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -47,7 +48,7 @@ export default function DashboardPage() {
       }
 
       setUser(user);
-      await fetchSongs();
+      await fetchSongs(user.id);
       setLoading(false);
     };
 
@@ -67,6 +68,7 @@ export default function DashboardPage() {
 
     const { error } = await supabase.from("songs").insert([
       {
+        user_id: user.id,
         song_title: songTitle,
         artist_name: artistName,
         song_link: songLink,
@@ -86,7 +88,7 @@ export default function DashboardPage() {
     setArtistName("");
     setSongLink("");
 
-    await fetchSongs();
+    await fetchSongs(user.id);
   };
 
   const handleLogout = async () => {
