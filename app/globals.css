@@ -2,6 +2,17 @@
   box-sizing: border-box;
 }
 
+.campaigns { text-align: left; margin: 40px 0; border-top: 1px solid #6b7280; padding-top: 24px; }
+.campaigns label { display: block; margin: 16px 0; }
+.campaigns input:not([type=checkbox]), .campaigns textarea { display: block; width: 100%; padding: 12px; margin-top: 8px; font: inherit; border-radius: 6px; }
+.campaigns fieldset { min-width: 0; border: 1px solid #6b7280; border-radius: 8px; padding: 16px; }
+.campaigns .network-choice { display: inline-flex; align-items: center; gap: 8px; margin-right: 16px; }
+.campaign-info, .campaign-card { background: #111827; padding: 16px; border-radius: 8px; }
+.campaigns small { display: block; margin: 8px 0 16px; line-height: 1.5; }
+.campaigns a { color: #fbbf24; }
+.campaigns button { cursor: pointer; margin: 8px 8px 8px 0; }
+@media (max-width: 600px) { .container {padding: 12px;} .hero {padding: 24px 14px; width:100%; min-width:0;} h1 {font-size:32px;} }
+
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import Campaigns from "./Campaigns";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -183,6 +184,8 @@ export default function DashboardPage() {
         </form>
 
         <hr style={{ margin: "40px 0" }} />
+
+        {user && <Campaigns user={user} />}
 
         <h2>My Saved Songs</h2>
 
