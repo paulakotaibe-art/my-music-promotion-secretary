@@ -1,28 +1,34 @@
 # Three-platform publishing rollout
 
 ## Delivered
-- Private campaign drafts: title, caption, HTTPS media link, three platform choices, planned date, edit.
-- Authenticated, read-only provider connection check with a server-controlled pilot user binding.
-- No route schedules, publishes, or uploads media yet. Dates remain planning dates.
+- Private campaign drafts for YouTube, Facebook and TikTok.
+- A registered Metricool public OAuth client with authorization-code flow and S256 PKCE.
+- Ten-minute encrypted HttpOnly/Secure state cookie, fixed production callback, server-verified Supabase identity.
+- Per-user encrypted OAuth token storage protected by database ownership policies.
+- Read-only MCP account verification and local disconnect endpoint.
+- No media upload, scheduling or publishing route is enabled yet.
 
-## Server configuration
-Set sensitive variables in Vercel, never in NEXT_PUBLIC variables or repository files:
-- METRICOOL_API_TOKEN: eligible Metricool account's REST API token.
-- METRICOOL_USER_ID: Metricool account ID.
-- METRICOOL_BRAND_ID: pilot brand ID.
-- METRICOOL_PILOT_USER_ID: verified Supabase user UUID owning that brand.
+## Production configuration
+- METRICOOL_OAUTH_CLIENT_ID: registered public client ID.
+- METRICOOL_OAUTH_ENCRYPTION_KEY: 32-byte AES key encoded as 64 hex characters. Keep server-side and preserve across releases; changing it invalidates saved connections.
+- Existing NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.
+- No paid Metricool REST API token or OpenAI API key is required for this connection stage.
 
-Missing configuration leaves drafts usable and displays setup required. The connection check is read-only and does not prove publication permissions or media compatibility.
+Callback: https://my-music-promotion-secretary-x96x.vercel.app/api/integrations/metricool/callback
+Open the production dashboard, select Connect Metricool, authorize, then Check publishing connection.
+A chat connector authorization cannot be reused by the deployed app.
 
-Official setup: https://help.metricool.com/basic-guide-for-api-integration-r97af
-API access requires Advanced or Custom. The ChatGPT Metricool connection is separate.
-Do not purchase an upgrade without reviewing costs and suitability for a customer-facing product.
+## Verification completed
+Provider registration returned HTTP 201 and accepted the production callback, public-client authentication and requested MCP scopes.
+Local tests cover encryption tampering, PKCE/state expiry and a read-only MCP account handshake.
+Database transaction checks owner read/write and cross-account isolation, then rolls back test data.
+Production build passes. User authorization and a real MCP account check remain to be completed after deployment.
 
-## Remaining, in order
-1. Confirm API eligibility and configure pilot credentials securely. Verify live read-only check.
-2. Add durable media uploads and validation; collect YouTube audience/title and TikTok publishing options.
-3. Add server-owned customer-to-brand bindings and a supported account connection flow; never reuse pilot brand for subscribers.
-4. Implement scheduling with durable submission records, duplicate protection, provider IDs, cancellation, status reconciliation and clear retry handling.
-5. Complete Stripe webhook verification, entitlements, limits and cancellation; supply owner with checkout test link when ready.
-6. Reliable login email, onboarding, mobile verification, customer policies and support.
-7. Run A Beautiful Life pilot across Facebook, TikTok and YouTube; verify public URLs and report results before advertising automation.
+## Remaining in order
+1. Complete owner consent and verify live MCP account-tool name/response compatibility. Reconnect is currently required after access-token expiry; automatic refresh and rotation are pending.
+2. Confirm Metricool supports this customer-facing OAuth use and document provider limits and costs.
+3. Add brand selection, disconnect UI, durable media upload/validation, YouTube audience choices and TikTok settings.
+4. Add scheduling with durable records, duplicate protection, provider IDs, cancellation and status reconciliation.
+5. Add OpenAI caption/campaign assistance only after publishing integration works, with measured usage limits; no OpenAI spend is enabled now.
+6. Complete Stripe webhooks, entitlements, plan limits and cancellation. Provide owner a checkout link when ready to test.
+7. Improve email delivery, onboarding, policies, mobile verification, then run A Beautiful Life pilot and verify public posts and reporting.
