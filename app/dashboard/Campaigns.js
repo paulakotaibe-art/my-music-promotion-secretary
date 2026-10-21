@@ -14,6 +14,20 @@ export default function Campaigns({user}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [connection, setConnection] = useState(null);
+  const [checking, setChecking] = useState(false);
+  async function checkConnection() {
+    setChecking(true);
+    try {
+      const {data:{session}} = await supabase.auth.getSession();
+      if (!session) throw new Error("Please sign in again.");
+      const response = await fetch("/api/publishing/connection", {headers:{Authorization:`Bearer ${session.access_token}`}, cache:"no-store"});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Unable to check connection.");
+      setConnection(result);
+    } catch(e) {setConnection({state:"connection_error",message:e.message,networks:[]});}
+    finally {setChecking(false);}
+  }
   const refresh = useCallback(async () => {
     const {data, error} = await supabase.from("campaign_drafts").select("*").eq("user_id", user.id).order("created_at", {ascending:false});
     if (error) throw new Error("Unable to load campaign drafts. Please retry.");
@@ -56,6 +70,8 @@ export default function Campaigns({user}) {
     <h2 id="campaign-heading">Plan a promotion campaign</h2>
     <p>Prepare posts for YouTube, Facebook, and TikTok. Drafts are private to your account.</p>
     <p className="campaign-info"><strong>Draft workspace:</strong> automatic publishing is not connected yet. A planned date does not schedule a post.</p>
+    <button type="button" disabled={checking} onClick={checkConnection}>{checking ? "Checking…" : "Check publishing connection"}</button>
+    {connection && <div role="status"><p>{connection.message}</p>{connection.networks.map(n=><p key={n.network}>{networks[n.network]}: {n.connected ? "Connected to provider" : "Not connected to provider"}</p>)}</div>}
     {error && <p role="alert">{error}</p>}
     {notice && <p role="status">{notice}</p>}
     <form onSubmit={save}>
