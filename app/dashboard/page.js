@@ -14,6 +14,9 @@ export default function DashboardPage() {
   const [songs, setSongs] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [notice, setNotice] = useState("");
+  const [editingId, setEditingId] = useState(null);
 
   const fetchSongs = async (userId) => {
     const { data, error } = await supabase
@@ -23,10 +26,11 @@ export default function DashboardPage() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      alert(error.message);
+      setErrorMessage(error.message);
       return;
     }
 
+    setErrorMessage("");
     setSongs(data || []);
   };
 
@@ -48,8 +52,13 @@ export default function DashboardPage() {
       }
 
       setUser(user);
-      await fetchSongs(user.id);
-      setLoading(false);
+      try {
+        await fetchSongs(user.id);
+      } catch {
+        setErrorMessage("Unable to load songs. Check your connection and retry.");
+      } finally {
+        setLoading(false);
+      }
     };
 
     protectDashboard();
@@ -64,31 +73,44 @@ export default function DashboardPage() {
       return;
     }
 
-    setSaving(true);
-
-    const { error } = await supabase.from("songs").insert([
-      {
-        user_id: user.id,
-        song_title: songTitle,
-        artist_name: artistName,
-        song_link: songLink,
-      },
-    ]);
-
-    setSaving(false);
-
-    if (error) {
-      alert(error.message);
+    setNotice("");
+    setErrorMessage("");
+    const title = songTitle.trim();
+    const artist = artistName.trim();
+    let url;
+    try {
+      url = new URL(songLink.trim());
+      if (!["https:", "http:"].includes(url.protocol)) throw new Error();
+    } catch {
+      setErrorMessage("Enter a valid song link starting with https:// or http://.");
       return;
     }
+    if (!title || !artist) {
+      setErrorMessage("Enter a song title and artist name.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const details = {song_title: title, artist_name: artist, song_link: url.href};
+      const result = editingId
+        ? await supabase.from("songs").update(details).eq("id", editingId).eq("user_id", user.id).select("id")
+        : await supabase.from("songs").insert([{...details, user_id: user.id}]).select("id");
+      if (result.error) throw result.error;
+      if (!result.data?.length) throw new Error("The song was not saved. Refresh and try again.");
+      setSongTitle(""); setArtistName(""); setSongLink(""); setEditingId(null);
+      setNotice(editingId ? "Song updated successfully." : "Song saved successfully.");
+      await fetchSongs(user.id);
+    } catch (error) {
+      setErrorMessage(error.message || "Unable to save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    alert("Song saved successfully!");
-
-    setSongTitle("");
-    setArtistName("");
-    setSongLink("");
-
-    await fetchSongs(user.id);
+  const editSong = (song) => {
+    setEditingId(song.id); setSongTitle(song.song_title);
+    setArtistName(song.artist_name || ""); setSongLink(song.song_link || "");
+    setErrorMessage(""); setNotice("");
   };
 
   const handleLogout = async () => {
@@ -117,11 +139,14 @@ export default function DashboardPage() {
           Logout
         </button>
 
-        <p>Upload and manage your own song promotion details.</p>
+        <p>Save and manage your song promotion details.</p>
 
-        <form onSubmit={handleSubmit}>
+        {errorMessage && <div role="alert"><p>{errorMessage}</p><button type="button" onClick={() => fetchSongs(user.id).catch(() => setErrorMessage("Unable to load songs. Please retry."))}>Reload songs</button></div>}
+        {notice && <p role="status">{notice}</p>}
+        <form onSubmit={handleSubmit} aria-label="Song details">
           <input
             type="text"
+            aria-label="Song title"
             placeholder="Song Title"
             value={songTitle}
             onChange={(e) => setSongTitle(e.target.value)}
@@ -131,6 +156,7 @@ export default function DashboardPage() {
 
           <input
             type="text"
+            aria-label="Artist name"
             placeholder="Artist Name"
             value={artistName}
             onChange={(e) => setArtistName(e.target.value)}
@@ -140,6 +166,7 @@ export default function DashboardPage() {
 
           <input
             type="text"
+            aria-label="YouTube or song link"
             placeholder="YouTube / Song Link"
             value={songLink}
             onChange={(e) => setSongLink(e.target.value)}
@@ -150,8 +177,9 @@ export default function DashboardPage() {
           <br />
 
           <button type="submit" className="button" disabled={saving}>
-            {saving ? "Saving..." : "Save Song"}
+            {saving ? "Saving..." : editingId ? "Update Song" : "Save Song"}
           </button>
+          {editingId && <button type="button" disabled={saving} onClick={() => {setEditingId(null); setSongTitle(""); setArtistName(""); setSongLink("");}}>Cancel editing</button>}
         </form>
 
         <hr style={{ margin: "40px 0" }} />
@@ -159,7 +187,7 @@ export default function DashboardPage() {
         <h2>My Saved Songs</h2>
 
         {songs.length === 0 ? (
-          <p>No songs uploaded yet.</p>
+          <p>No songs saved yet. Add your first song above.</p>
         ) : (
           songs.map((song) => (
             <div
@@ -173,7 +201,8 @@ export default function DashboardPage() {
             >
               <h3>{song.song_title}</h3>
               <p>Artist: {song.artist_name}</p>
-              <p>Link: {song.song_link}</p>
+              {/^https?:\/\//i.test(song.song_link || "") && <p><a style={{color: "#fbbf24"}} href={song.song_link} target="_blank" rel="noopener noreferrer">Open song</a></p>}
+              <button type="button" className="button" disabled={saving} onClick={() => editSong(song)}>Edit song</button>
             </div>
           ))
         )}

@@ -1,7 +1,6 @@
 
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const priceMap = {
   starter: "price_1TSvMnLLCK65C4jJWDUCrUNn",
@@ -22,7 +21,11 @@ export async function POST(request) {
       );
     }
 
-    const origin = request.headers.get("origin");
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return Response.json({ error: "Checkout is currently unavailable. Please try again later." }, { status: 503 });
+    }
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const origin = new URL(request.url).origin;
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -44,7 +47,7 @@ export async function POST(request) {
     return Response.json({ url: session.url });
   } catch (error) {
     return Response.json(
-      { error: error.message },
+      { error: "Unable to start checkout. Please try again later." },
       { status: 500 }
     );
   }
