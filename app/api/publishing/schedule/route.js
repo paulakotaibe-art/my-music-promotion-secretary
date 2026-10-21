@@ -4,6 +4,7 @@ import {APP_ORIGIN,seal,unseal,inspectAccounts,withMetricool,toolData} from "../
 import {buildPost,prepareDraft,signResult,verifyResult,safePlannerUrl} from "../../../../lib/scheduling.mjs";
 import {ownedMediaUrl} from "../../../../lib/media.mjs";
 export const dynamic="force-dynamic";
+export const maxDuration=60;
 const reply=(body,status=200)=>Response.json(body,{status,headers:{"Cache-Control":"private, no-store"}});
 async function connection(auth) {
   const {data,error}=await auth.client.from("metricool_connections").select("encrypted_tokens").eq("user_id",auth.user.id).maybeSingle();
