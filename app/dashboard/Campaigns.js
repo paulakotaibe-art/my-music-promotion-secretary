@@ -3,6 +3,7 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import {supabase} from "../../lib/supabaseClient";
 import Scheduler from "./Scheduler";
 import MediaUpload from "./MediaUpload";
+import {withDeadline} from "../../lib/deadline.mjs";
 const networks={youtube:"YouTube",facebook:"Facebook",tiktok:"TikTok"};
 const empty={title:"",artist:"",caption:"",media_url:"",cover_url:"",media_kind:"video",platforms:["youtube","facebook","tiktok"],is_public:false};
 export default function Campaigns({user}){
@@ -11,11 +12,17 @@ export default function Campaigns({user}){
  const [connection,setConnection]=useState(null),[brandId,setBrandId]=useState(""),[preview,setPreview]=useState(null),[historyKey,setHistoryKey]=useState(0);
  const [timing,setTiming]=useState("now"),[date,setDate]=useState(""),[time,setTime]=useState("");
  const [kids,setKids]=useState(""),[privacy,setPrivacy]=useState(""),[ownBrand,setOwnBrand]=useState(false),[thirdParty,setThirdParty]=useState(false),[rights,setRights]=useState(false);
- const lock=useRef(false);
+ const lock=useRef(false),reviewRef=useRef(null),errorRef=useRef(null);
+ const [stage,setStage]=useState("");
+ useEffect(()=>{if(preview){reviewRef.current?.focus();reviewRef.current?.querySelector("[data-final-publish]")?.scrollIntoView({behavior:"smooth",block:"center"});}},[preview]);
+ useEffect(()=>{if(error){errorRef.current?.focus();errorRef.current?.scrollIntoView({behavior:"smooth",block:"center"});}},[error]);
  const api=useCallback(async(path,body)=>{
-  const {data:{session}}=await supabase.auth.getSession();if(!session)throw new Error("Please sign in again.");
-  const response=await fetch(path,{method:body ? "POST":"GET",headers:{Authorization:`Bearer ${session.access_token}`,...(body ? {"Content-Type":"application/json"}:{})},...(body ? {body:JSON.stringify(body)}:{}),cache:"no-store"});
-  const result=await response.json();if(!response.ok)throw new Error(result.message || "Please try again.");return result;
+  const {data:{session}}=await withDeadline(()=>supabase.auth.getSession(),8000,"Your sign-in check took too long. Please save your work and sign in again.");if(!session)throw new Error("Please sign in again.");
+  const controller=new AbortController();
+  return withDeadline(async()=>{
+  const response=await fetch(path,{method:body ? "POST":"GET",headers:{Authorization:`Bearer ${session.access_token}`,...(body ? {"Content-Type":"application/json"}:{})},...(body ? {body:JSON.stringify(body)}:{}),cache:"no-store",signal:controller.signal});
+  const result=await response.json().catch(()=>{throw new Error(body?.action==="submit" ? "The publishing result is not confirmed. Do not retry; check Your posts first." : "Preparation could not finish. Your draft is saved; please try Ready to Publish again.");});if(!response.ok)throw new Error(result.message || "Please try again.");return result;
+  },30000,body?.action==="submit" ? "The publishing result is not confirmed. Do not retry; check Your posts first." : "Account checks took too long. Your saved draft is safe. Please try Ready to Publish again.",()=>controller.abort());
  },[]);
  const refresh=useCallback(async()=>{
   const {data,error}=await supabase.from("campaign_drafts").select("*").eq("user_id",user.id).order("created_at",{ascending:false});
@@ -53,17 +60,20 @@ export default function Campaigns({user}){
   if(ready && !rights)throw new Error("Confirm that you have permission to publish this content.");
   const details={...form,title:form.title.trim(),caption:form.caption.trim(),planned_at:planned()};
   const query=draftId ? supabase.from("campaign_drafts").update(details).eq("id",draftId).eq("user_id",user.id) : supabase.from("campaign_drafts").insert({...details,user_id:user.id});
-  const {data,error}=await query.select("id").single();
+  const controller=new AbortController();
+  const {data,error}=await withDeadline(()=>query.select("id").single().abortSignal(controller.signal),12000,"Saving took too long. Check Saved drafts before trying again.",()=>controller.abort());
   if(error || !data)throw new Error("Unable to save your post. Please try again.");
   setDraftId(data.id);return data.id;
  }
  async function prepare(event){
   event.preventDefault();if(lock.current)return;lock.current=true;setBusy(true);setError("");setNotice("");
   try{
+   setStage("Saving your post…");
    const id=await persist(true);
+   setStage("Checking your social accounts…");
    const result=await api("/api/publishing/schedule",{action:"preview",draftId:id,brandId:brandId || undefined,publishNow:timing==="now",madeForKids:kids==="" ? undefined:kids==="yes",tiktokPrivacy:privacy,ownBrand,thirdParty,rightsConfirmed:rights});
-   setPreview(result);await refresh();
-  }catch(e){setError(e.message);}finally{setBusy(false);lock.current=false;}
+   setPreview(result);refresh().catch(()=>{});
+  }catch(e){setError(e.message);}finally{setBusy(false);setStage("");lock.current=false;}
  }
  async function save(){
   if(lock.current)return;lock.current=true;setBusy(true);setError("");
@@ -84,7 +94,7 @@ export default function Campaigns({user}){
  }
  return <section className="campaigns" aria-labelledby="campaign-heading">
   <h2 id="campaign-heading">Create your post</h2><p>Upload. Choose your platforms. Get ready, then publish.</p>
-  {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
+  {notice && <p role="status">{notice}</p>}
   <details className="social-settings"><summary>Social accounts · one-time setup</summary><p>Authorize your social accounts once. We check them automatically when you prepare a post. Secure authorization opens our publishing partner; your passwords are never entered here.</p>
    <button type="button" disabled={busy || uploading || !!preview} onClick={connect}>Connect or reconnect social accounts</button>
    {connection?.brands?.flatMap(b=>b.networks || []).map((n,i)=><span className="account-badge" key={i}>{networks[n.network] || n.network}: {n.connected ? "Connected":"Needs setup"}</span>)}
@@ -104,14 +114,14 @@ export default function Campaigns({user}){
    {form.platforms.includes("tiktok") && <><label>TikTok visibility<select required value={privacy} onChange={e=>setPrivacy(e.target.value)}><option value="">Choose who can see it</option><option value="PUBLIC_TO_EVERYONE">Public</option><option value="SELF_ONLY">Only me</option></select></label><label><input type="checkbox" checked={ownBrand} onChange={e=>setOwnBrand(e.target.checked)}/> Promotes my own brand</label><label><input type="checkbox" checked={thirdParty} onChange={e=>setThirdParty(e.target.checked)}/> Paid partnership or promotes another brand</label><small>TikTok comments, duets and stitches are off for this pilot.</small></>}
    <label><input type="checkbox" checked={form.is_public} onChange={e=>change("is_public",e.target.checked)}/> Include a public album page with artwork and playback{form.media_kind==="audio" ? " (required for audio sharing)":""}</label>
    <label><input type="checkbox" required checked={rights} onChange={e=>setRights(e.target.checked)}/> I have permission to publish this media, artwork and caption.</label>
-   <div className="publish-actions"><button type="button" onClick={save}>Save draft for later</button><button type="submit" className="button">{busy ? "Preparing…" : "Ready to Publish"}</button></div>
+   {error && <p className="publish-error" ref={errorRef} tabIndex={-1} role="alert">{error}</p>}{busy && <p role="status">{stage || "Working…"}</p>}<div className="publish-actions"><button type="button" onClick={save}>Save draft for later</button><button type="submit" className="button">{busy ? stage || "Preparing…" : "Ready to Publish"}</button></div>
   </fieldset></form>
-  {preview && <div className="publish-review" role="region" aria-label="Ready to publish"><h3>Ready to publish</h3><p>Accounts checked. Your post is prepared.</p><div className="album-preview"><div>{preview.preview.cover_url ? <img src={preview.preview.cover_url} alt="Album artwork"/>:<div className="artwork-placeholder">♫</div>}</div><div><h3>{preview.preview.title}</h3><p>{preview.preview.brand}</p><p>{preview.preview.platforms.map(p=>networks[p]).join(" · ")}</p><p>{preview.preview.options.publishNow ? "As soon as possible":new Date(preview.preview.date).toLocaleString()}</p></div></div>
+  {preview && <div ref={reviewRef} tabIndex={-1} className="publish-review" role="region" aria-label="Ready to publish"><h3>Ready to publish</h3><p>Accounts checked. Your post is prepared.</p><div className="album-preview"><div>{preview.preview.cover_url ? <img src={preview.preview.cover_url} alt="Album artwork"/>:<div className="artwork-placeholder">♫</div>}</div><div><h3>{preview.preview.title}</h3><p>{preview.preview.brand}</p><p>{preview.preview.platforms.map(p=>networks[p]).join(" · ")}</p><p>{preview.preview.options.publishNow ? "As soon as possible":new Date(preview.preview.date).toLocaleString()}</p></div></div>
    <p style={{whiteSpace:"pre-wrap"}}>{preview.preview.caption}</p>
    {preview.preview.media_kind==="audio" ? <audio controls src={preview.preview.media_url}/> : <video controls preload="metadata" poster={preview.preview.cover_url || undefined} src={preview.preview.media_url}/>}
    {preview.preview.platforms.includes("youtube") && <small>YouTube: public · {preview.preview.options.madeForKids ? "made for children":"not made for children"}</small>}
    {preview.preview.platforms.includes("tiktok") && <small>TikTok: {preview.preview.options.tiktokPrivacy==="SELF_ONLY" ? "Only me":"Public"} · Own-brand promotion: {preview.preview.options.ownBrand ? "yes":"no"} · Paid/third-party promotion: {preview.preview.options.thirdParty ? "yes":"no"}</small>}
-   <div className="publish-actions"><button type="button" disabled={busy} onClick={()=>setPreview(null)}>Edit post</button><button type="button" className="button" disabled={busy} onClick={publish}>{busy ? "Sending…" : "Publish"}</button></div>
+   <div className="publish-actions"><button type="button" disabled={busy} onClick={()=>setPreview(null)}>Edit post</button><button type="button" className="button" data-final-publish disabled={busy} onClick={publish}>{busy ? "Sending…" : "Publish"}</button></div>
   </div>}
   <details className="saved-posts"><summary>Saved drafts</summary>{drafts.length===0 ? <p>No saved drafts yet.</p>:drafts.map(d=><article className="campaign-card" key={d.id}><h3>{d.title}</h3><p>{d.platforms.map(p=>networks[p]).join(" · ")}</p><button type="button" disabled={busy || uploading} onClick={()=>edit(d)}>Continue editing</button>{d.is_public && <a href={`/releases/${d.id}`} target="_blank" rel="noopener noreferrer">Open album page</a>}</article>)}</details>
   <Scheduler userId={user.id} refreshKey={historyKey}/>
