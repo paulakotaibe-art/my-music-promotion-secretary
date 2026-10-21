@@ -1,136 +1,119 @@
 "use client";
-
-import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
+import {useCallback,useEffect,useRef,useState} from "react";
+import {supabase} from "../../lib/supabaseClient";
 import Scheduler from "./Scheduler";
 import MediaUpload from "./MediaUpload";
-
-const networks = {youtube: "YouTube", facebook: "Facebook", tiktok: "TikTok"};
-const empty = {title: "", caption: "", media_url: "", platforms: ["youtube", "facebook", "tiktok"], planned_at: "", artist:"",cover_url:"",media_kind:"video",is_public:false};
-
-export default function Campaigns({user}) {
-  const [form, setForm] = useState(empty);
-  const [drafts, setDrafts] = useState([]);
-  const [editing, setEditing] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [uploading,setUploading]=useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [connection, setConnection] = useState(null);
-  const [checking, setChecking] = useState(false);
-  async function connectMetricool() {
-    setChecking(true); setError("");
-    try {
-      const {data:{session}}=await supabase.auth.getSession();
-      if(!session) throw new Error("Please sign in again.");
-      const response=await fetch("/api/integrations/metricool/connect",{method:"POST",headers:{Authorization:`Bearer ${session.access_token}`}});
-      const result=await response.json();
-      if(!response.ok) throw new Error(result.message || "Unable to connect.");
-      const destination=new URL(result.url);
-      if(destination.origin!=="https://app.metricool.com" || destination.pathname!=="/oauth/authorize") throw new Error("Invalid connection destination.");
-      window.location.assign(destination.href);
-    } catch(e) {setError(e.message);setChecking(false);}
-  }
-  useEffect(()=>{
-    const url=new URL(window.location.href);
-    const outcome=url.searchParams.get("metricool");
-    if(outcome) {
-      if(outcome==="authorized") setNotice("Metricool authorization saved. Use Check publishing connection to verify your platforms.");
-      else setError("Metricool authorization did not complete. Please reconnect and try again.");
-      url.searchParams.delete("metricool"); window.history.replaceState(null,"",url);
-    }
-  },[]);
-  async function checkConnection() {
-    setChecking(true);
-    try {
-      const {data:{session}} = await supabase.auth.getSession();
-      if (!session) throw new Error("Please sign in again.");
-      const response = await fetch("/api/publishing/connection", {headers:{Authorization:`Bearer ${session.access_token}`}, cache:"no-store"});
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Unable to check connection.");
-      setConnection(result);
-    } catch(e) {setConnection({state:"connection_error",message:e.message,networks:[]});}
-    finally {setChecking(false);}
-  }
-  const refresh = useCallback(async () => {
-    const {data, error} = await supabase.from("campaign_drafts").select("*").eq("user_id", user.id).order("created_at", {ascending:false});
-    if (error) throw new Error("Unable to load campaign drafts. Please retry.");
-    setDrafts(data || []);
-  }, [user.id]);
-  useEffect(() => {refresh().catch(e => setError(e.message)).finally(() => setLoading(false));}, [refresh]);
-  const change = (key, value) => setForm(prev => ({...prev, [key]:value}));
-  async function save(event) {
-    event.preventDefault(); setError(""); setNotice("");
-    if (!form.platforms.length) {setError("Choose at least one platform."); return;}
-    let media = form.media_url.trim();
-    if (media) {
-      try {const url = new URL(media); if (url.protocol !== "https:") throw new Error(); media = url.href;}
-      catch {setError("Use an HTTPS video file link, or leave it blank for now."); return;}
-    }
-    const planned = form.planned_at ? new Date(form.planned_at) : null;
-    if (planned && (!Number.isFinite(planned.getTime()) || planned <= new Date())) {setError("Choose a future planned date and time."); return;}
-    const details = {...form, title:form.title.trim(), caption:form.caption.trim(), media_url:media, planned_at:planned?.toISOString() || null};
-    if (!details.title) {setError("Enter a campaign title."); return;}
-    setBusy(true);
-    try {
-      const result = editing
-        ? await supabase.from("campaign_drafts").update(details).eq("id", editing).eq("user_id", user.id).select("id")
-        : await supabase.from("campaign_drafts").insert({...details, user_id:user.id}).select("id");
-      if (result.error || !result.data?.length) throw new Error("Unable to save your draft. Please retry.");
-      setForm(empty); setEditing(null); setNotice("Draft saved. No post has been scheduled or published.");
-      await refresh();
-    } catch(e) {setError(e.message);} finally {setBusy(false);}
-  }
-  function edit(draft) {
-    let local = "";
-    if (draft.planned_at) {
-      const date = new Date(draft.planned_at);
-      local = new Date(date.getTime() - date.getTimezoneOffset()*60000).toISOString().slice(0,16);
-    }
-    setEditing(draft.id); setForm({title:draft.title, caption:draft.caption, media_url:draft.media_url, platforms:draft.platforms, planned_at:local,artist:draft.artist || "",cover_url:draft.cover_url || "",media_kind:draft.media_kind || "video",is_public:!!draft.is_public});
-    setNotice(""); setError("");
-  }
-  return <section className="campaigns" aria-labelledby="campaign-heading">
-    <h2 id="campaign-heading">Your release studio</h2>
-    <p>Upload your music or video, add album artwork, and prepare your social campaign. Your album page stays private until you choose to share it.</p>
-    <p className="campaign-info"><strong>Draft workspace:</strong> saving a draft does not schedule a post. Use the scheduling preview below to submit it.</p>
-    <button type="button" disabled={checking} onClick={checkConnection}>{checking ? "Checking…" : "Check publishing connection"}</button>
-    <button type="button" className="button" disabled={checking} onClick={connectMetricool}>Connect Metricool</button>
-    {connection && <div role="status"><p>{connection.message}</p>{connection.networks.map(n=><p key={n.network}>{networks[n.network]}: {n.connected ? "Connected to provider" : "Not connected to provider"}</p>)}</div>}
-    {error && <p role="alert">{error}</p>}
-    {notice && <p role="status">{notice}</p>}
-    <form onSubmit={save}>
-      <fieldset disabled={busy || uploading}>
-        <legend>{editing ? "Edit campaign draft" : "New campaign draft"}</legend>
-        <label>Campaign title<input required maxLength={100} value={form.title} onChange={e=>change("title",e.target.value)}/></label>
-        <label>Artist or album name<input maxLength={120} value={form.artist} onChange={e=>change("artist",e.target.value)}/></label>
-        <label>Post caption<textarea rows={5} maxLength={2200} value={form.caption} onChange={e=>change("caption",e.target.value)}/></label>
-        <div className="upload-grid">
-          <MediaUpload slot="media" userId={user.id} value={form.media_url} kind={form.media_kind} onBusy={setUploading} onChange={(url,kind)=>setForm(prev=>({...prev,media_url:url,media_kind:kind,...(kind==="audio" ? {platforms:["facebook"]} : {})}))}/>
-          <MediaUpload slot="cover" userId={user.id} value={form.cover_url} onBusy={setUploading} onChange={url=>change("cover_url",url)}/>
-        </div>
-        {form.media_kind==="audio" && <p className="campaign-info">Audio plays on your album page. Facebook can share that page with your cover. For a native YouTube or TikTok post, upload a video version of your song.</p>}
-        <div className="album-preview"><div>{form.cover_url ? <img src={form.cover_url} alt="Album preview"/> : <div className="artwork-placeholder" aria-label="Album artwork placeholder">♫</div>}</div><div><small>ALBUM PAGE PREVIEW</small><h3>{form.title || "Your release title"}</h3><p>{form.artist || "Your artist name"}</p><p>{form.caption || "Your introduction will appear here."}</p></div></div>
-        <label><input type="checkbox" checked={form.is_public} onChange={e=>change("is_public",e.target.checked)}/> Make an album page anyone can open and share</label>
-        <small>Save to generate the album-page link. Switching this off and saving hides the page; previously uploaded file links remain accessible.</small>
-        <details><summary>Advanced: use an existing file link</summary><label>Direct media link<input type="url" value={form.media_url} onChange={e=>change("media_url",e.target.value)} placeholder="https://…/video.mp4"/></label><label>Media type<select value={form.media_kind} onChange={e=>change("media_kind",e.target.value)}><option value="video">Video</option><option value="audio">Audio</option></select></label></details>
-        <fieldset><legend>Intended platforms</legend>{Object.entries(networks).map(([key,label])=><label className="network-choice" key={key}><input type="checkbox" checked={form.platforms.includes(key)} onChange={e=>change("platforms",e.target.checked ? [...form.platforms,key] : form.platforms.filter(p=>p!==key))}/>{label}</label>)}</fieldset>
-        <label>Planned date and time (optional)<input type="datetime-local" value={form.planned_at} onChange={e=>change("planned_at",e.target.value)}/></label>
-        <small>Time zone: {Intl.DateTimeFormat().resolvedOptions().timeZone}. Save this time, then review and confirm it in Schedule a saved campaign.</small>
-        <div><button className="button" type="submit">{busy ? "Saving…" : "Save draft"}</button>{editing && <button type="button" onClick={()=>{setEditing(null);setForm(empty);}}>Cancel editing</button>}</div>
-      </fieldset>
-    </form>
-    <h3>My campaign drafts</h3>
-    <button type="button" disabled={busy} onClick={()=>refresh().then(()=>setError("")).catch(e=>setError(e.message))}>Reload drafts</button>
-    {loading ? <p>Loading drafts…</p> : drafts.length===0 ? <p>No campaign drafts yet.</p> : drafts.map(d=><article key={d.id} className="campaign-card">
-      {d.cover_url && <img className="cover-preview" src={d.cover_url} alt={`${d.title} cover`}/>}<h3>{d.title}</h3><p>{d.artist}</p><strong>Campaign draft · {d.media_kind=== "audio" ? "Audio" : "Video"}</strong><p>{d.platforms.map(p=>networks[p]).join(" · ")}</p>
-      <p style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{d.caption}</p>
-      {d.media_url && <a href={d.media_url} target="_blank" rel="noopener noreferrer">Review media link</a>}
-      <p>{d.planned_at ? `Planned: ${new Date(d.planned_at).toLocaleString()}` : "No date planned"}</p>
-      {d.is_public && <p><a href={`/releases/${d.id}`} target="_blank" rel="noopener noreferrer">Open album page</a><br/><span className="generated-link">{`https://my-music-promotion-secretary-x96x.vercel.app/releases/${d.id}`}</span></p>}
-      <button type="button" disabled={busy || uploading} onClick={()=>edit(d)}>Edit draft</button>
-    </article>)}
-    <Scheduler drafts={drafts} connection={connection} userId={user.id}/>
-  </section>;
+const networks={youtube:"YouTube",facebook:"Facebook",tiktok:"TikTok"};
+const empty={title:"",artist:"",caption:"",media_url:"",cover_url:"",media_kind:"video",platforms:["youtube","facebook","tiktok"],is_public:false};
+export default function Campaigns({user}){
+ const [form,setForm]=useState(empty),[draftId,setDraftId]=useState(null),[drafts,setDrafts]=useState([]);
+ const [busy,setBusy]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const [connection,setConnection]=useState(null),[brandId,setBrandId]=useState(""),[preview,setPreview]=useState(null),[historyKey,setHistoryKey]=useState(0);
+ const [timing,setTiming]=useState("now"),[date,setDate]=useState(""),[time,setTime]=useState("");
+ const [kids,setKids]=useState(""),[privacy,setPrivacy]=useState(""),[ownBrand,setOwnBrand]=useState(false),[thirdParty,setThirdParty]=useState(false),[rights,setRights]=useState(false);
+ const lock=useRef(false);
+ const api=useCallback(async(path,body)=>{
+  const {data:{session}}=await supabase.auth.getSession();if(!session)throw new Error("Please sign in again.");
+  const response=await fetch(path,{method:body ? "POST":"GET",headers:{Authorization:`Bearer ${session.access_token}`,...(body ? {"Content-Type":"application/json"}:{})},...(body ? {body:JSON.stringify(body)}:{}),cache:"no-store"});
+  const result=await response.json();if(!response.ok)throw new Error(result.message || "Please try again.");return result;
+ },[]);
+ const refresh=useCallback(async()=>{
+  const {data,error}=await supabase.from("campaign_drafts").select("*").eq("user_id",user.id).order("created_at",{ascending:false});
+  if(error)throw new Error("Unable to load your saved posts.");setDrafts(data || []);return data || [];
+ },[user.id]);
+ useEffect(()=>{
+  refresh().then(items=>{const key=`pending-post:${user.id}`,id=sessionStorage.getItem(key);const found=items.find(d=>d.id===id);if(found){edit(found);sessionStorage.removeItem(key);}}).catch(e=>setError(e.message));
+  api("/api/publishing/connection").then(setConnection).catch(()=>setConnection(null));
+  const url=new URL(window.location.href),outcome=url.searchParams.get("metricool");
+  if(outcome){setNotice(outcome==="authorized" ? "Social account authorization saved." : "Account authorization was not completed.");url.searchParams.delete("metricool");window.history.replaceState(null,"",url);}
+ },[refresh,api]);
+ const change=(key,value)=>setForm(prev=>({...prev,[key]:value}));
+ async function connect(){
+  if(lock.current)return;lock.current=true;setBusy(true);setError("");
+  try{
+   // Preserve work before navigating to the one-time authorization screen.
+   if(form.title.trim()){const id=await persist(false);sessionStorage.setItem(`pending-post:${user.id}`,id);}
+   const result=await api("/api/integrations/metricool/connect",{});
+   const destination=new URL(result.url);
+   if(destination.origin!=="https://app.metricool.com" || destination.pathname!=="/oauth/authorize")throw new Error("Unable to open secure account setup.");
+   window.location.assign(destination.href);
+  }catch(e){setError(e.message);setBusy(false);lock.current=false;}
+ }
+ function planned(){
+  if(timing==="now")return null;
+  if(!date || !time)throw new Error("Choose both a date and time, or choose As soon as possible.");
+  const value=new Date(`${date}T${time}`);
+  if(!Number.isFinite(value.getTime()) || value.getTime()<Date.now()+600000)throw new Error("Choose a time at least ten minutes ahead.");
+  return value.toISOString();
+ }
+ async function persist(ready){
+  if(!form.title.trim())throw new Error("Add a title for your post.");
+  if(!form.platforms.length)throw new Error("Choose at least one platform.");
+  if(ready && !form.media_url)throw new Error("Upload your video or audio first.");
+  if(ready && !rights)throw new Error("Confirm that you have permission to publish this content.");
+  const details={...form,title:form.title.trim(),caption:form.caption.trim(),planned_at:planned()};
+  const query=draftId ? supabase.from("campaign_drafts").update(details).eq("id",draftId).eq("user_id",user.id) : supabase.from("campaign_drafts").insert({...details,user_id:user.id});
+  const {data,error}=await query.select("id").single();
+  if(error || !data)throw new Error("Unable to save your post. Please try again.");
+  setDraftId(data.id);return data.id;
+ }
+ async function prepare(event){
+  event.preventDefault();if(lock.current)return;lock.current=true;setBusy(true);setError("");setNotice("");
+  try{
+   const id=await persist(true);
+   const result=await api("/api/publishing/schedule",{action:"preview",draftId:id,brandId:brandId || undefined,publishNow:timing==="now",madeForKids:kids==="" ? undefined:kids==="yes",tiktokPrivacy:privacy,ownBrand,thirdParty,rightsConfirmed:rights});
+   setPreview(result);await refresh();
+  }catch(e){setError(e.message);}finally{setBusy(false);lock.current=false;}
+ }
+ async function save(){
+  if(lock.current)return;lock.current=true;setBusy(true);setError("");
+  try{await persist(false);await refresh();setNotice("Draft saved. Continue whenever you are ready.");}catch(e){setError(e.message);}finally{setBusy(false);lock.current=false;}
+ }
+ async function publish(){
+  if(lock.current || !preview)return;lock.current=true;setBusy(true);setError("");setNotice("");
+  try{const result=await api("/api/publishing/schedule",{action:"submit",ticket:preview.ticket,confirmed:true});setNotice(result.message);if(result.status==="accepted"){setForm(empty);setDraftId(null);setRights(false);setKids("");setPrivacy("");setTiming("now");setDate("");setTime("");}}
+  catch(e){setError(e.message);}
+  finally{setPreview(null);setHistoryKey(k=>k+1);setBusy(false);lock.current=false;}
+ }
+ function edit(draft){
+  setPreview(null);setDraftId(draft.id);setForm({title:draft.title,artist:draft.artist || "",caption:draft.caption,media_url:draft.media_url,cover_url:draft.cover_url || "",media_kind:draft.media_kind || "video",platforms:draft.platforms,is_public:!!draft.is_public});
+  setTiming(draft.planned_at ? "later":"now");
+  if(draft.planned_at){const value=new Date(draft.planned_at);const local=new Date(value.getTime()-value.getTimezoneOffset()*60000).toISOString();setDate(local.slice(0,10));setTime(local.slice(11,16));}else{setDate("");setTime("");}
+  setKids("");setPrivacy("");setOwnBrand(false);setThirdParty(false);setRights(false);setError("");setNotice("");
+  document.getElementById("campaign-heading")?.scrollIntoView({behavior:"smooth"});
+ }
+ return <section className="campaigns" aria-labelledby="campaign-heading">
+  <h2 id="campaign-heading">Create your post</h2><p>Upload. Choose your platforms. Get ready, then publish.</p>
+  {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
+  <details className="social-settings"><summary>Social accounts · one-time setup</summary><p>Authorize your social accounts once. We check them automatically when you prepare a post. Secure authorization opens our publishing partner; your passwords are never entered here.</p>
+   <button type="button" disabled={busy || uploading || !!preview} onClick={connect}>Connect or reconnect social accounts</button>
+   {connection?.brands?.flatMap(b=>b.networks || []).map((n,i)=><span className="account-badge" key={i}>{networks[n.network] || n.network}: {n.connected ? "Connected":"Needs setup"}</span>)}
+  </details>
+  <form onSubmit={prepare}><fieldset disabled={busy || uploading || !!preview}><legend>Your post</legend>
+   <label>Title<input required maxLength={100} value={form.title} onChange={e=>change("title",e.target.value)}/></label>
+   <label>Artist or album name<input maxLength={120} value={form.artist} onChange={e=>change("artist",e.target.value)}/></label>
+   <label>Caption<textarea required rows={4} maxLength={2000} value={form.caption} onChange={e=>change("caption",e.target.value)}/></label>
+   <div className="upload-grid"><MediaUpload slot="media" userId={user.id} value={form.media_url} kind={form.media_kind} onBusy={setUploading} onChange={(url,kind)=>setForm(prev=>({...prev,media_url:url,media_kind:kind,...(kind==="audio" ? {platforms:["facebook"]}: {})}))}/><MediaUpload slot="cover" userId={user.id} value={form.cover_url} onBusy={setUploading} onChange={url=>change("cover_url",url)}/></div>
+   <fieldset><legend>Where should it go?</legend>{Object.entries(networks).map(([key,label])=><label className="network-choice" key={key}><input type="checkbox" disabled={form.media_kind==="audio" && key!=="facebook"} checked={form.platforms.includes(key)} onChange={e=>change("platforms",e.target.checked ? [...form.platforms,key]:form.platforms.filter(p=>p!==key))}/>{label}</label>)}</fieldset>
+   {form.media_kind==="audio" && <small>Audio shares a playable album page on Facebook. Upload a video version for YouTube or TikTok; automatic audio-to-video conversion is not available yet.</small>}
+   {connection?.brands?.length>1 && <label>Posting profile<select required value={brandId} onChange={e=>setBrandId(e.target.value)}><option value="">Choose your profile</option>{connection.brands.map(b=><option key={b.id} value={b.id}>{b.label}</option>)}</select></label>}
+   <label>When?<select value={timing} onChange={e=>setTiming(e.target.value)}><option value="now">As soon as possible</option><option value="later">Choose a date and time</option></select></label>
+   {timing==="later" && <div className="upload-grid"><label>Date<input required type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label>Time<input required type="time" value={time} onChange={e=>setTime(e.target.value)}/></label></div>}
+   <small>Time zone: {Intl.DateTimeFormat().resolvedOptions().timeZone}. As soon as possible allows a few minutes for processing.</small>
+   {form.platforms.includes("youtube") && <label>Is this video made for children?<select required value={kids} onChange={e=>setKids(e.target.value)}><option value="">Choose the YouTube audience</option><option value="no">No</option><option value="yes">Yes</option></select></label>}
+   {form.platforms.includes("tiktok") && <><label>TikTok visibility<select required value={privacy} onChange={e=>setPrivacy(e.target.value)}><option value="">Choose who can see it</option><option value="PUBLIC_TO_EVERYONE">Public</option><option value="SELF_ONLY">Only me</option></select></label><label><input type="checkbox" checked={ownBrand} onChange={e=>setOwnBrand(e.target.checked)}/> Promotes my own brand</label><label><input type="checkbox" checked={thirdParty} onChange={e=>setThirdParty(e.target.checked)}/> Paid partnership or promotes another brand</label><small>TikTok comments, duets and stitches are off for this pilot.</small></>}
+   <label><input type="checkbox" checked={form.is_public} onChange={e=>change("is_public",e.target.checked)}/> Include a public album page with artwork and playback{form.media_kind==="audio" ? " (required for audio sharing)":""}</label>
+   <label><input type="checkbox" required checked={rights} onChange={e=>setRights(e.target.checked)}/> I have permission to publish this media, artwork and caption.</label>
+   <div className="publish-actions"><button type="button" onClick={save}>Save draft for later</button><button type="submit" className="button">{busy ? "Preparing…" : "Ready to Publish"}</button></div>
+  </fieldset></form>
+  {preview && <div className="publish-review" role="region" aria-label="Ready to publish"><h3>Ready to publish</h3><p>Accounts checked. Your post is prepared.</p><div className="album-preview"><div>{preview.preview.cover_url ? <img src={preview.preview.cover_url} alt="Album artwork"/>:<div className="artwork-placeholder">♫</div>}</div><div><h3>{preview.preview.title}</h3><p>{preview.preview.brand}</p><p>{preview.preview.platforms.map(p=>networks[p]).join(" · ")}</p><p>{preview.preview.options.publishNow ? "As soon as possible":new Date(preview.preview.date).toLocaleString()}</p></div></div>
+   <p style={{whiteSpace:"pre-wrap"}}>{preview.preview.caption}</p>
+   {preview.preview.media_kind==="audio" ? <audio controls src={preview.preview.media_url}/> : <video controls preload="metadata" poster={preview.preview.cover_url || undefined} src={preview.preview.media_url}/>}
+   {preview.preview.platforms.includes("youtube") && <small>YouTube: public · {preview.preview.options.madeForKids ? "made for children":"not made for children"}</small>}
+   {preview.preview.platforms.includes("tiktok") && <small>TikTok: {preview.preview.options.tiktokPrivacy==="SELF_ONLY" ? "Only me":"Public"} · Own-brand promotion: {preview.preview.options.ownBrand ? "yes":"no"} · Paid/third-party promotion: {preview.preview.options.thirdParty ? "yes":"no"}</small>}
+   <div className="publish-actions"><button type="button" disabled={busy} onClick={()=>setPreview(null)}>Edit post</button><button type="button" className="button" disabled={busy} onClick={publish}>{busy ? "Sending…" : "Publish"}</button></div>
+  </div>}
+  <details className="saved-posts"><summary>Saved drafts</summary>{drafts.length===0 ? <p>No saved drafts yet.</p>:drafts.map(d=><article className="campaign-card" key={d.id}><h3>{d.title}</h3><p>{d.platforms.map(p=>networks[p]).join(" · ")}</p><button type="button" disabled={busy || uploading} onClick={()=>edit(d)}>Continue editing</button>{d.is_public && <a href={`/releases/${d.id}`} target="_blank" rel="noopener noreferrer">Open album page</a>}</article>)}</details>
+  <Scheduler userId={user.id} refreshKey={historyKey}/>
+ </section>;
 }

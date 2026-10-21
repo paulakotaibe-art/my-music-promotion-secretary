@@ -45,3 +45,8 @@ A unique database record is created before the external write. Each draft permit
 Applied promotion_uploads_and_album_pages migration. A rolled-back transaction verified owner-folder uploads, foreign-folder rejection, anonymous public/private page isolation and denial of account-ID reads. Existing security advisor warnings for rls_auto_enable and leaked-password protection are unchanged; no new storage/table findings.
 
 The current attached advert is about 64 MB and needs a smaller export for the 50 MB pilot limit. Do not promise arbitrary file sizes or automatic audio-to-video conversion. Social platforms may crop artwork or cache link previews; public-page metadata is not a guarantee of identical native presentation.
+
+## Simplified publishing flow
+The release studio saves a draft and verifies selected accounts automatically on Ready to Publish. It then shows one final review card with a Publish button; there is no separate draft picker, manual connection check or second review checkbox. Provider consent remains a truthful one-time Social accounts setup; it cannot be bypassed. Required YouTube audience and TikTok visibility/disclosures remain explicit user choices.
+
+As soon as possible allocates a two-minute processing window; its timestamp is regenerated server-side at final confirmation. Future scheduling retains the ten-minute lead requirement. Queued is displayed separately from verified publication. Existing unique-attempt protection remains; no automatic retries. Audio currently shares a public playback page on Facebook; native YouTube/TikTok still require video.

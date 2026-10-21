@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {buildPost,signResult,verifyResult,safePlannerUrl} from "../lib/scheduling.mjs";
+import {buildPost,prepareDraft,signResult,verifyResult,safePlannerUrl} from "../lib/scheduling.mjs";
 import {withMetricool} from "../lib/metricool-oauth.mjs";
 const now=Date.parse("2026-10-21T10:00:00Z");
 const draft={title:"A Beautiful Life",caption:"Listen and enjoy.",platforms:["youtube","facebook","tiktok"],media_url:"https://media.example.com/song.mp4",planned_at:"2026-10-22T09:00:00Z"};
@@ -41,4 +41,15 @@ test("audio shares a public album page with cover on Facebook and cannot masquer
  assert.deepEqual(post.media,[audio.cover_url]);assert.ok(post.text.includes(`/releases/${audio.id}`));assert.ok(!post.media.includes(audio.media_url));
  assert.throws(()=>buildPost({...audio,platforms:["youtube"]},options,now),/video version/);
  assert.throws(()=>buildPost({...audio,is_public:false},options,now),/public album/);
+});
+
+test("publish now refreshes processing time at final confirmation without weakening future scheduling",()=>{
+ const optionsNow={...options,publishNow:true};
+ const prepared=prepareDraft({...draft,planned_at:null},optionsNow,now);
+ assert.equal(prepared.planned_at,new Date(now+120000).toISOString());
+ assert.doesNotThrow(()=>buildPost(prepared,optionsNow,now));
+ assert.throws(()=>buildPost(prepared,options,now),/ten minutes/);
+ const refreshed=prepareDraft(prepared,optionsNow,now+300000);
+ assert.equal(refreshed.planned_at,new Date(now+420000).toISOString());
+ assert.equal(prepareDraft(draft,options,now),draft);
 });
