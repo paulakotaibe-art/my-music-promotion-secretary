@@ -1,22 +1,26 @@
-import { createClient } from "@supabase/supabase-js";
-import { checkPublishingConnection } from "../../../../lib/metricool.mjs";
-
-export const dynamic = "force-dynamic";
-function reply(body, status=200) {
-  return Response.json(body, {status, headers:{"Cache-Control":"private, no-store"}});
-}
+import {authenticate} from "../../../../lib/server-auth";
+import {inspectAccounts,unseal} from "../../../../lib/metricool-oauth.mjs";
+export const dynamic="force-dynamic";
+function reply(body,status=200) {return Response.json(body,{status,headers:{"Cache-Control":"private, no-store"}});}
 export async function GET(request) {
-  const header = request.headers.get("authorization") || "";
-  if (!header.startsWith("Bearer ") || header.length > 16384) return reply({message:"Please sign in again."},401);
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return reply({message:"Account verification is temporarily unavailable."},503);
+  let auth;
+  try {auth=await authenticate((request.headers.get("authorization") || "").replace(/^Bearer /,""));}
+  catch {return reply({message:"Please sign in again."},401);}
   try {
-    const client = createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
-    const {data, error} = await client.auth.getUser(header.slice(7));
-    if (error || !data.user) return reply({message:"Please sign in again."},401);
-    return reply(await checkPublishingConnection(data.user.id));
-  } catch {
-    return reply({message:"Unable to verify your account. Please retry."},503);
-  }
+    const {data,error}=await auth.client.from("metricool_connections").select("encrypted_tokens").eq("user_id",auth.user.id).maybeSingle();
+    if(error) throw error;
+    if(!data) return reply({state:"not_linked",message:"Connect Metricool to verify your social platforms. No paid REST API token is needed for this connection.",networks:[]});
+    const tokens=unseal(data.encrypted_tokens);
+    if(tokens.expires_at && tokens.expires_at<Date.now()+30000) return reply({state:"reconnect_required",message:"Your authorization has expired. Please reconnect Metricool.",networks:[]});
+    const brands=await inspectAccounts(tokens.access_token);
+    return reply({state:"connected",message:brands.length===1 ? "Verified account: "+brands[0].label+". Scheduling is still being built; no posts have been sent." : "Authorization verified. Brand selection is required before scheduling.",networks:brands.length===1 ? brands[0].networks : [],brands});
+  } catch {return reply({state:"connection_error",message:"Unable to verify the provider connection. Retry or reconnect Metricool. Your drafts are safe.",networks:[]});}
+}
+export async function DELETE(request) {
+  let auth;
+  try {auth=await authenticate((request.headers.get("authorization") || "").replace(/^Bearer /,""));}
+  catch {return reply({message:"Please sign in again."},401);}
+  const {error}=await auth.client.from("metricool_connections").delete().eq("user_id",auth.user.id);
+  if(error) return reply({message:"Unable to disconnect. Please retry."},503);
+  return reply({message:"Connection removed from this app. You can also revoke its permission in Metricool.",networks:[],state:"not_linked"});
 }

@@ -16,6 +16,28 @@ export default function Campaigns({user}) {
   const [notice, setNotice] = useState("");
   const [connection, setConnection] = useState(null);
   const [checking, setChecking] = useState(false);
+  async function connectMetricool() {
+    setChecking(true); setError("");
+    try {
+      const {data:{session}}=await supabase.auth.getSession();
+      if(!session) throw new Error("Please sign in again.");
+      const response=await fetch("/api/integrations/metricool/connect",{method:"POST",headers:{Authorization:`Bearer ${session.access_token}`}});
+      const result=await response.json();
+      if(!response.ok) throw new Error(result.message || "Unable to connect.");
+      const destination=new URL(result.url);
+      if(destination.origin!=="https://app.metricool.com" || destination.pathname!=="/oauth/authorize") throw new Error("Invalid connection destination.");
+      window.location.assign(destination.href);
+    } catch(e) {setError(e.message);setChecking(false);}
+  }
+  useEffect(()=>{
+    const url=new URL(window.location.href);
+    const outcome=url.searchParams.get("metricool");
+    if(outcome) {
+      if(outcome==="authorized") setNotice("Metricool authorization saved. Use Check publishing connection to verify your platforms.");
+      else setError("Metricool authorization did not complete. Please reconnect and try again.");
+      url.searchParams.delete("metricool"); window.history.replaceState(null,"",url);
+    }
+  },[]);
   async function checkConnection() {
     setChecking(true);
     try {
@@ -71,6 +93,7 @@ export default function Campaigns({user}) {
     <p>Prepare posts for YouTube, Facebook, and TikTok. Drafts are private to your account.</p>
     <p className="campaign-info"><strong>Draft workspace:</strong> automatic publishing is not connected yet. A planned date does not schedule a post.</p>
     <button type="button" disabled={checking} onClick={checkConnection}>{checking ? "Checking…" : "Check publishing connection"}</button>
+    <button type="button" className="button" disabled={checking} onClick={connectMetricool}>Connect Metricool</button>
     {connection && <div role="status"><p>{connection.message}</p>{connection.networks.map(n=><p key={n.network}>{networks[n.network]}: {n.connected ? "Connected to provider" : "Not connected to provider"}</p>)}</div>}
     {error && <p role="alert">{error}</p>}
     {notice && <p role="status">{notice}</p>}
