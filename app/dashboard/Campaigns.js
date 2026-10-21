@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import Scheduler from "./Scheduler";
 
 const networks = {youtube: "YouTube", facebook: "Facebook", tiktok: "TikTok"};
 const empty = {title: "", caption: "", media_url: "", platforms: ["youtube", "facebook", "tiktok"], planned_at: ""};
@@ -91,7 +92,7 @@ export default function Campaigns({user}) {
   return <section className="campaigns" aria-labelledby="campaign-heading">
     <h2 id="campaign-heading">Plan a promotion campaign</h2>
     <p>Prepare posts for YouTube, Facebook, and TikTok. Drafts are private to your account.</p>
-    <p className="campaign-info"><strong>Draft workspace:</strong> automatic publishing is not connected yet. A planned date does not schedule a post.</p>
+    <p className="campaign-info"><strong>Draft workspace:</strong> saving a draft does not schedule a post. Use the scheduling preview below to submit it.</p>
     <button type="button" disabled={checking} onClick={checkConnection}>{checking ? "Checking…" : "Check publishing connection"}</button>
     <button type="button" className="button" disabled={checking} onClick={connectMetricool}>Connect Metricool</button>
     {connection && <div role="status"><p>{connection.message}</p>{connection.networks.map(n=><p key={n.network}>{networks[n.network]}: {n.connected ? "Connected to provider" : "Not connected to provider"}</p>)}</div>}
@@ -119,5 +120,6 @@ export default function Campaigns({user}) {
       <p>{d.planned_at ? `Planned: ${new Date(d.planned_at).toLocaleString()}` : "No date planned"}</p>
       <button type="button" disabled={busy} onClick={()=>edit(d)}>Edit draft</button>
     </article>)}
+    <Scheduler drafts={drafts} connection={connection} userId={user.id}/>
   </section>;
 }

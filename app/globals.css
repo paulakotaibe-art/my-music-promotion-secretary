@@ -11,6 +11,7 @@
 .campaigns small { display: block; margin: 8px 0 16px; line-height: 1.5; }
 .campaigns a { color: #fbbf24; }
 .campaigns button { cursor: pointer; margin: 8px 8px 8px 0; }
+.campaigns select {display:block; width:100%; padding:12px; margin-top:8px; font:inherit; border-radius:6px;}
 @media (max-width: 600px) { .container {padding: 12px;} .hero {padding: 24px 14px; width:100%; min-width:0;} h1 {font-size:32px;} }
 
 body {

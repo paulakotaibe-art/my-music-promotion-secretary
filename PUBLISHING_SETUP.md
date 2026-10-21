@@ -6,7 +6,9 @@
 - Ten-minute encrypted HttpOnly/Secure state cookie, fixed production callback, server-verified Supabase identity.
 - Per-user encrypted OAuth token storage protected by database ownership policies.
 - Read-only MCP account verification and local disconnect endpoint.
-- No media upload, scheduling or publishing route is enabled yet.
+- Three-platform scheduling preview and explicit confirmation, with brand, audience, privacy and rights choices.
+- Durable per-user submission attempts, one attempt per draft, and signed provider acceptance/uncertainty results.
+- Direct video URLs are supported; binary upload and full media validation remain pending.
 
 ## Production configuration
 - METRICOOL_OAUTH_CLIENT_ID: registered public client ID.
@@ -22,13 +24,17 @@ A chat connector authorization cannot be reused by the deployed app.
 Provider registration returned HTTP 201 and accepted the production callback, public-client authentication and requested MCP scopes.
 Local tests cover encryption tampering, PKCE/state expiry and a read-only MCP account handshake.
 Database transaction checks owner read/write and cross-account isolation, then rolls back test data.
-Production build passes. User authorization and a real MCP account check remain to be completed after deployment.
+Production build and eight tests pass, covering scheduling validation, signed evidence and no automatic retry of uncertain writes. Database checks cover duplicate attempts and owner isolation. Owner OAuth consent and live MCP account verification succeeded. No live scheduling/publication test has been completed.
+
+## Scheduling pilot behavior
+Select a saved draft with a future date (at least ten minutes ahead). Video destinations require a direct HTTPS MP4, MOV or WebM URL, not a watch-page link. Preview verifies connected destinations. The five-minute encrypted preview ticket is bound to the signed-in user; only explicit confirmation attempts provider scheduling.
+
+A unique database record is created before the external write. Each draft permits one attempt; an uncertain outcome must be checked in Metricool before deliberately creating a new draft. The app never automatically retries a write. Accepted means provider acceptance, not published. Submission evidence is signed to distinguish verified server results from client-modified records. Provider format/duration checks still apply.
 
 ## Remaining in order
-1. Complete owner consent and verify live MCP account-tool name/response compatibility. Reconnect is currently required after access-token expiry; automatic refresh and rotation are pending.
-2. Confirm Metricool supports this customer-facing OAuth use and document provider limits and costs.
-3. Add brand selection, disconnect UI, durable media upload/validation, YouTube audience choices and TikTok settings.
-4. Add scheduling with durable records, duplicate protection, provider IDs, cancellation and status reconciliation.
-5. Add OpenAI caption/campaign assistance only after publishing integration works, with measured usage limits; no OpenAI spend is enabled now.
-6. Complete Stripe webhooks, entitlements, plan limits and cancellation. Provide owner a checkout link when ready to test.
-7. Improve email delivery, onboarding, policies, mobile verification, then run A Beautiful Life pilot and verify public posts and reporting.
+1. Run A Beautiful Life with original video media, chosen publication time, audience and privacy settings; verify queue, public posts and reporting. Add status reconciliation and cancellation.
+2. Implement automatic OAuth refresh/rotation (expired connections currently require reconnect), disconnect UI, durable uploads and stronger media validation.
+3. Confirm Metricool supports this customer-facing OAuth use and document provider limits and costs before public customer launch.
+4. Add OpenAI caption/campaign assistance with measured usage limits; no OpenAI spend is enabled now.
+5. Complete Stripe webhooks, entitlements, plan limits and cancellation. Provide owner a checkout link when ready to test.
+6. Improve email delivery, onboarding, policies and mobile verification before advertising.
