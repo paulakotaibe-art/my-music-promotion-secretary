@@ -1,15 +1,15 @@
 import {randomUUID} from "node:crypto";
 import {authenticate} from "../../../../lib/server-auth";
 import {APP_ORIGIN,seal,unseal,inspectAccounts,withMetricool,toolData} from "../../../../lib/metricool-oauth.mjs";
-import {buildPost,signResult,verifyResult,safePlannerUrl} from "../../../../lib/scheduling.mjs";
+import {buildPost,prepareDraft,signResult,verifyResult,safePlannerUrl} from "../../../../lib/scheduling.mjs";
 import {ownedMediaUrl} from "../../../../lib/media.mjs";
 export const dynamic="force-dynamic";
 const reply=(body,status=200)=>Response.json(body,{status,headers:{"Cache-Control":"private, no-store"}});
 async function connection(auth) {
   const {data,error}=await auth.client.from("metricool_connections").select("encrypted_tokens").eq("user_id",auth.user.id).maybeSingle();
-  if(error || !data) throw new Error("Connect Metricool before scheduling.");
+  if(error || !data) throw new Error("Connect your social accounts once using Social accounts in the post form.");
   const tokens=unseal(data.encrypted_tokens);
-  if(tokens.expires_at && tokens.expires_at<Date.now()+30000) throw new Error("Your authorization has expired. Reconnect Metricool before scheduling.");
+  if(tokens.expires_at && tokens.expires_at<Date.now()+30000) throw new Error("Your social authorization has expired. Use Social accounts to reconnect once.");
   return tokens.access_token;
 }
 export async function GET(request) {
@@ -31,15 +31,20 @@ export async function POST(request) {
   if(body.action==="preview") {
     try {
       if(!/^[a-f0-9-]{36}$/i.test(body.draftId || "")) throw new Error("Choose a saved campaign draft.");
-      const {data:draft,error}=await auth.client.from("campaign_drafts").select("*").eq("id",body.draftId).eq("user_id",auth.user.id).single();
-      if(error || !draft) throw new Error("Campaign draft was not found.");
-      if(draft.cover_url && !ownedMediaUrl(draft.cover_url,auth.user.id)) throw new Error("Upload your album artwork again before scheduling.");
-      const options={madeForKids:body.madeForKids,tiktokPrivacy:body.tiktokPrivacy,rightsConfirmed:body.rightsConfirmed,ownBrand:body.ownBrand===true,thirdParty:body.thirdParty===true};
+      const {data:savedDraft,error}=await auth.client.from("campaign_drafts").select("*").eq("id",body.draftId).eq("user_id",auth.user.id).single();
+      if(error || !savedDraft) throw new Error("Campaign draft was not found.");
+
+      const options={publishNow:body.publishNow===true,madeForKids:body.madeForKids,tiktokPrivacy:body.tiktokPrivacy,rightsConfirmed:body.rightsConfirmed,ownBrand:body.ownBrand===true,thirdParty:body.thirdParty===true};
+      const draft=prepareDraft(savedDraft,options);
+      if(draft.cover_url && !ownedMediaUrl(draft.cover_url,auth.user.id)) throw new Error("Upload your album artwork again.");
+      const {data:prior,error:priorError}=await auth.client.from("campaign_submissions").select("id").eq("user_id",auth.user.id).eq("draft_id",draft.id).maybeSingle();
+      if(priorError)throw new Error("Unable to check this post. Please try Ready to Publish again.");
+      if(prior)throw new Error("This draft already has a publishing attempt. See Your posts before trying another copy.");
       const post=buildPost(draft,options);
       const access=await connection(auth), brands=await inspectAccounts(access);
       const brand=body.brandId ? brands.find(b=>b.id===String(body.brandId)) : brands.length===1 ? brands[0] : null;
-      if(!brand) throw new Error("Check your connection and choose a brand.");
-      if(draft.platforms.some(p=>!brand.networks.find(n=>n.network===p)?.connected)) throw new Error("One or more selected platforms are not connected to this brand.");
+      if(!brand) throw new Error("Connect your social accounts or choose your posting profile.");
+      if(draft.platforms.some(p=>!brand.networks.find(n=>n.network===p)?.connected)) throw new Error("A selected platform needs authorization. Open Social accounts to finish its one-time setup.");
       const pending={id:randomUUID(),userId:auth.user.id,draftId:draft.id,brandId:brand.id,options,draft,post,expires:Date.now()+300000};
       return reply({ticket:seal(pending),preview:{title:draft.title,caption:post.text,media_url:draft.media_url,cover_url:draft.cover_url,media_kind:draft.media_kind,platforms:draft.platforms,date:draft.planned_at,brand:brand.label,options}});
     } catch(e) {return reply({message:e.message || "Unable to prepare preview."},400);}
@@ -48,26 +53,27 @@ export async function POST(request) {
   let pending,access;
   try {
     pending=unseal(body.ticket || "");
-    if(pending.userId!==auth.user.id || pending.expires<Date.now()) throw new Error("Preview expired. Prepare a new preview.");
-    buildPost(pending.draft,pending.options);
+    if(pending.userId!==auth.user.id || pending.expires<Date.now()) throw new Error("Your review has expired. Click Ready to Publish again.");
+    pending.draft=prepareDraft(pending.draft,pending.options);
+    pending.post=buildPost(pending.draft,pending.options);
     access=await connection(auth);
   } catch(e) {return reply({message:e.message || "Invalid preview."},400);}
   // Insert the unique attempt BEFORE any provider write. Never retry an uncertain write.
   const {error:claimError}=await auth.client.from("campaign_submissions").insert({id:pending.id,user_id:auth.user.id,draft_id:pending.draftId,snapshot:{title:pending.draft.title,platforms:pending.draft.platforms,planned_at:pending.draft.planned_at,caption:pending.draft.caption,media_url:pending.draft.media_url,brand_id:pending.brandId}});
-  if(claimError) return reply({message:claimError.code==="23505" ? "This draft already has a submission attempt. Check its status and Metricool before creating another post." : "Unable to record the submission. No post was sent."},409);
-  let status="unknown",message="Provider outcome is uncertain. Check Metricool before creating another post.",plannerUrl=null,providerId=null;
+  if(claimError) return reply({message:claimError.code==="23505" ? "This draft already has a publishing attempt. See Your posts before creating another copy." : "Unable to record the submission. No post was sent."},409);
+  let status="unknown",message="The publishing result is awaiting confirmation. Do not create another copy until this attempt has been checked.",plannerUrl=null,providerId=null;
   try {
     const result=await withMetricool(access,call=>call("createscheduledpost",{blogId:pending.brandId,date:pending.post.publicationDate.dateTime+"Z",info:JSON.stringify(pending.post)}));
-    if(result.isError) {status="rejected";message="The provider rejected this submission. Check media, permissions and plan limits in Metricool.";}
+    if(result.isError) {status="rejected";message="The publishing service could not accept the post. Its media, permissions or account limits need attention.";}
     else {
       const data=toolData(result),post=data.data || data.post || data;
       plannerUrl=safePlannerUrl(data.plannerUrl || post.plannerUrl);
       providerId=post.id ?? post.uuid ?? null;
-      if(providerId || plannerUrl) {status="accepted";message="Accepted by Metricool for scheduling. Publication has not yet been verified.";}
+      if(providerId || plannerUrl) {status="accepted";message="Your post is queued for the selected time. Publication has not yet been verified.";}
     }
   } catch {} // No retry: timeout may occur after the provider accepted the post.
   const evidence={id:pending.id,userId:auth.user.id,status,message,plannerUrl,providerId};
   const {error:saveError}=await auth.client.from("campaign_submissions").update({evidence,evidence_signature:signResult(evidence)}).eq("id",pending.id).eq("user_id",auth.user.id);
-  if(saveError) return reply({message:"The submission was attempted but its result could not be saved. Check Metricool before retrying.",status:"unknown"},502);
+  if(saveError) return reply({message:"Your post was sent, but its result could not be saved. Do not retry until this attempt has been checked.",status:"unknown"},502);
   return reply({status,message,plannerUrl},status==="accepted" ? 200 : 502);
 }
