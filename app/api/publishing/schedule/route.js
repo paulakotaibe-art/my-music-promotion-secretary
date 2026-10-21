@@ -2,6 +2,7 @@ import {randomUUID} from "node:crypto";
 import {authenticate} from "../../../../lib/server-auth";
 import {APP_ORIGIN,seal,unseal,inspectAccounts,withMetricool,toolData} from "../../../../lib/metricool-oauth.mjs";
 import {buildPost,signResult,verifyResult,safePlannerUrl} from "../../../../lib/scheduling.mjs";
+import {ownedMediaUrl} from "../../../../lib/media.mjs";
 export const dynamic="force-dynamic";
 const reply=(body,status=200)=>Response.json(body,{status,headers:{"Cache-Control":"private, no-store"}});
 async function connection(auth) {
@@ -32,6 +33,7 @@ export async function POST(request) {
       if(!/^[a-f0-9-]{36}$/i.test(body.draftId || "")) throw new Error("Choose a saved campaign draft.");
       const {data:draft,error}=await auth.client.from("campaign_drafts").select("*").eq("id",body.draftId).eq("user_id",auth.user.id).single();
       if(error || !draft) throw new Error("Campaign draft was not found.");
+      if(draft.cover_url && !ownedMediaUrl(draft.cover_url,auth.user.id)) throw new Error("Upload your album artwork again before scheduling.");
       const options={madeForKids:body.madeForKids,tiktokPrivacy:body.tiktokPrivacy,rightsConfirmed:body.rightsConfirmed,ownBrand:body.ownBrand===true,thirdParty:body.thirdParty===true};
       const post=buildPost(draft,options);
       const access=await connection(auth), brands=await inspectAccounts(access);
@@ -39,7 +41,7 @@ export async function POST(request) {
       if(!brand) throw new Error("Check your connection and choose a brand.");
       if(draft.platforms.some(p=>!brand.networks.find(n=>n.network===p)?.connected)) throw new Error("One or more selected platforms are not connected to this brand.");
       const pending={id:randomUUID(),userId:auth.user.id,draftId:draft.id,brandId:brand.id,options,draft,post,expires:Date.now()+300000};
-      return reply({ticket:seal(pending),preview:{title:draft.title,caption:draft.caption,media_url:draft.media_url,platforms:draft.platforms,date:draft.planned_at,brand:brand.label,options}});
+      return reply({ticket:seal(pending),preview:{title:draft.title,caption:post.text,media_url:draft.media_url,cover_url:draft.cover_url,media_kind:draft.media_kind,platforms:draft.platforms,date:draft.planned_at,brand:brand.label,options}});
     } catch(e) {return reply({message:e.message || "Unable to prepare preview."},400);}
   }
   if(body.action!=="submit" || body.confirmed!==true) return reply({message:"Preview and confirm your post first."},400);

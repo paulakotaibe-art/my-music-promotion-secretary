@@ -34,3 +34,11 @@ test("an uncertain provider write is attempted once, without retry",async()=>{
  await assert.rejects(withMetricool("test",call=>call("createscheduledpost",{}),request));
  assert.equal(writes,1);
 });
+
+test("audio shares a public album page with cover on Facebook and cannot masquerade as a native video",()=>{
+ const audio={...draft,id:"a0c39bed-73eb-4afd-bac1-3fd1c8939677",media_kind:"audio",media_url:"https://media.example.com/song.mp3",cover_url:"https://media.example.com/cover.jpg",platforms:["facebook"],is_public:true};
+ const post=buildPost(audio,options,now);
+ assert.deepEqual(post.media,[audio.cover_url]);assert.ok(post.text.includes(`/releases/${audio.id}`));assert.ok(!post.media.includes(audio.media_url));
+ assert.throws(()=>buildPost({...audio,platforms:["youtube"]},options,now),/video version/);
+ assert.throws(()=>buildPost({...audio,is_public:false},options,now),/public album/);
+});

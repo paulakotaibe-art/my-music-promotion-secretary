@@ -122,7 +122,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <main className="container">
-        <section className="hero">
+        <section className="hero dashboard-shell">
           <h1>Loading dashboard...</h1>
         </section>
       </main>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
 
   return (
     <main className="container">
-      <section className="hero">
+      <section className="hero dashboard-shell">
         <h1>Artist Dashboard</h1>
 
         <p>Welcome, {user?.email}</p>
@@ -140,7 +140,9 @@ export default function DashboardPage() {
           Logout
         </button>
 
-        <p>Save and manage your song promotion details.</p>
+        {user && <Campaigns user={user} />}
+        <details className="listening-links"><summary>Saved listening links (optional)</summary>
+        <p>Keep existing YouTube or song listening links here. Use the release studio above to upload and schedule media.</p>
 
         {errorMessage && <div role="alert"><p>{errorMessage}</p><button type="button" onClick={() => fetchSongs(user.id).catch(() => setErrorMessage("Unable to load songs. Please retry."))}>Reload songs</button></div>}
         {notice && <p role="status">{notice}</p>}
@@ -183,9 +185,7 @@ export default function DashboardPage() {
           {editingId && <button type="button" disabled={saving} onClick={() => {setEditingId(null); setSongTitle(""); setArtistName(""); setSongLink("");}}>Cancel editing</button>}
         </form>
 
-        <hr style={{ margin: "40px 0" }} />
 
-        {user && <Campaigns user={user} />}
 
         <h2>My Saved Songs</h2>
 
@@ -209,6 +209,7 @@ export default function DashboardPage() {
             </div>
           ))
         )}
+        </details>
       </section>
     </main>
   );
