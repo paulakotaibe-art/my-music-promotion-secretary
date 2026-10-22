@@ -13,7 +13,9 @@ export async function POST(request){let auth;try{auth=await billingAuth(request,
  const h=await stripe.webhookEndpoints.create({url:`${APP_ORIGIN}/api/billing/webhook`,enabled_events:['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','invoice.paid','invoice.payment_failed'],description:'Music Promotion Secretary subscription verification'});
  await bridge('set_hook',{secret:h.secret});
  }
- const configs=await stripe.billingPortal.configurations.list({active:true,limit:1});
- if(!configs.data.length)await stripe.billingPortal.configurations.create({business_profile:{headline:'Manage your music promotion subscription'},features:{customer_update:{enabled:true,allowed_updates:['email']},invoice_history:{enabled:true},payment_method_update:{enabled:true},subscription_cancel:{enabled:true,mode:'at_period_end'}}});
+ if(!config.portalConfiguration){
+ const portal=await stripe.billingPortal.configurations.create({business_profile:{headline:'Manage your music promotion subscription'},features:{customer_update:{enabled:true,allowed_updates:['email']},invoice_history:{enabled:true},payment_method_update:{enabled:true},subscription_cancel:{enabled:true,mode:'at_period_end'}}});
+ await bridge('set_portal',{id:portal.id});
+ }
  return json({message:'Stripe test billing is ready. Choose a test plan below. Test subscriptions do not spend real money or grant subscriber publishing.',ready:true});
  }catch{return json({message:'Stripe test setup could not finish. Check the test API key permissions and try again.'},503);}}

@@ -1,7 +1,7 @@
 -- Run as a single transaction. All fixtures and changes are rolled back.
 begin;
 do $$
-declare uid uuid:=gen_random_uuid();draft uuid;result jsonb;i int;blocked boolean:=false;old_exempt int;
+declare uid uuid:=gen_random_uuid();draft uuid;result jsonb;i int;blocked boolean:=false;old_exempt int; claim1 jsonb; claim2 jsonb;
 begin
  select count(*) into old_exempt from public.campaign_submissions where quota_exempt;
  insert into auth.users(id,email,created_at) values(uid,uid::text||'@billing-test.invalid',now());
@@ -24,7 +24,14 @@ begin
  exception when raise_exception then blocked:=sqlerrm like '%allowance%';end;
  if not blocked then raise exception 'Fourth trial promotion was allowed';end if;
  if has_column_privilege('authenticated','public.campaign_submissions','quota_exempt','UPDATE') or has_table_privilege('authenticated','app_private.subscriptions','UPDATE') then raise exception 'Client billing privilege leak';end if;
- insert into app_private.billing_customers values(uid,'cus_fixture',true);
+ insert into app_private.billing_customers(user_id,customer_id,livemode) values(uid,'cus_fixture',true);
+ update app_private.billing_config set bridge_hash=encode(extensions.digest('fixture-only-token','sha256'),'hex');
+ claim1:=public.billing_bridge('fixture-only-token','checkout_claim',jsonb_build_object('userId',uid,'livemode',true,'plan','starter'));
+ claim2:=public.billing_bridge('fixture-only-token','checkout_claim',jsonb_build_object('userId',uid,'livemode',true,'plan','growth'));
+ if claim1->>'nonce'<>claim2->>'nonce' or claim2->>'plan'<>'starter' then raise exception 'Parallel plan selection bypassed single checkout';end if;
+ perform public.billing_bridge('fixture-only-token','checkout_saved',jsonb_build_object('userId',uid,'livemode',true,'nonce',claim1->>'nonce','id','cs_fixture'));
+ claim2:=public.billing_bridge('fixture-only-token','checkout_claim',jsonb_build_object('userId',uid,'livemode',true,'plan','starter'));
+ if claim2->>'id'<>'cs_fixture' then raise exception 'Existing checkout session was not reused';end if;
  insert into app_private.subscriptions values('sub_fixture',uid,'cus_fixture','growth','active',now()+interval '1 year',false,1);
  result:=public.promotion_usage(now()+interval '2 minutes');
  if result->>'plan'<>'trial' then raise exception 'Test payment granted live allowance';end if;
