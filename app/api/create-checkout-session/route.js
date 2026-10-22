@@ -15,11 +15,14 @@ export async function POST(request){
  const customer=await customerFor(stripe,auth.user);
  const existing=await stripe.subscriptions.list({customer,status:'all',limit:100});
  if(existing.data.some(s=>['active','trialing','past_due','unpaid','incomplete','paused'].includes(s.status)))return json({error:"You already have a subscription. Use Manage subscription."},409);
+ const claim=await bridge('checkout_claim',{userId:auth.user.id,livemode:!isTest,plan});
+ if(claim.id){const previous=await stripe.checkout.sessions.retrieve(claim.id);if(previous.status==='open')return json({url:previous.url,test:isTest});await bridge('checkout_clear',{userId:auth.user.id,livemode:!isTest,nonce:claim.nonce});return json({error:'Your earlier checkout has ended. Choose your plan again.'},409);}
+ if(claim.plan!==plan)return json({error:'Checkout is already being prepared for another plan. Please retry that plan.'},409);
  // Both amount and plan are selected from the server catalog, never from client prices.
  const session=await stripe.checkout.sessions.create({mode:'subscription',customer,client_reference_id:auth.user.id,
  line_items:[{quantity:1,price_data:{currency:'gbp',unit_amount:p.pence,tax_behavior:'inclusive',recurring:{interval:'month'},product_data:{name:p.name,metadata:{app_plan:plan}}}}],
  metadata:{app_user_id:auth.user.id,app_plan:plan},subscription_data:{metadata:{app_user_id:auth.user.id,app_plan:plan}},
  success_url:`${APP_ORIGIN}/dashboard?payment=returned`,cancel_url:`${APP_ORIGIN}/pricing?payment=cancelled`},
- {idempotencyKey:`music-checkout-${auth.user.id}-${plan}-${Math.floor(Date.now()/600000)}`});return json({url:session.url,test:isTest});
+ {idempotencyKey:`music-checkout-${claim.nonce}`});await bridge('checkout_saved',{userId:auth.user.id,livemode:!isTest,nonce:claim.nonce,id:session.id});return json({url:session.url,test:isTest});
  }catch{return json({error:"Checkout is unavailable. No subscription has been activated. Please retry later."},503);}
 }

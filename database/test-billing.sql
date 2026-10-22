@@ -24,7 +24,7 @@ begin
  exception when raise_exception then blocked:=sqlerrm like '%allowance%';end;
  if not blocked then raise exception 'Fourth trial promotion was allowed';end if;
  if has_column_privilege('authenticated','public.campaign_submissions','quota_exempt','UPDATE') or has_table_privilege('authenticated','app_private.subscriptions','UPDATE') then raise exception 'Client billing privilege leak';end if;
- insert into app_private.billing_customers values(uid,'cus_fixture',true);
+ insert into app_private.billing_customers(user_id,customer_id,livemode) values(uid,'cus_fixture',true);
  insert into app_private.subscriptions values('sub_fixture',uid,'cus_fixture','growth','active',now()+interval '1 year',false,1);
  result:=public.promotion_usage(now()+interval '2 minutes');
  if result->>'plan'<>'trial' then raise exception 'Test payment granted live allowance';end if;

@@ -2,12 +2,12 @@
 create schema if not exists app_private;
 revoke all on schema app_private from public;
 grant usage on schema app_private to anon, authenticated;
-create table app_private.billing_config (id boolean primary key default true check(id), bridge_hash text not null, webhook_secret text, subscriber_launch boolean not null default false);
+create table app_private.billing_config (id boolean primary key default true check(id), bridge_hash text not null, webhook_secret text, portal_configuration text, subscriber_launch boolean not null default false);
 alter table app_private.billing_config enable row level security;
 -- Provision bridge_hash out of band; never commit the bridge token.
 create table app_private.app_owners(user_id uuid primary key references auth.users(id));
 alter table app_private.app_owners enable row level security;
-create table app_private.billing_customers(user_id uuid references auth.users(id), customer_id text unique not null, livemode boolean not null, primary key(user_id,livemode));
+create table app_private.billing_customers(user_id uuid references auth.users(id), customer_id text unique not null, livemode boolean not null, checkout_plan text, checkout_id text, checkout_nonce uuid, checkout_expires timestamptz, primary key(user_id,livemode));
 alter table app_private.billing_customers enable row level security;
 create table app_private.subscriptions(subscription_id text primary key,user_id uuid not null references auth.users(id),customer_id text not null,plan text not null check(plan in ('starter','growth','executive')),status text not null,period_end timestamptz not null,livemode boolean not null,event_created bigint not null);
 alter table app_private.subscriptions enable row level security;
@@ -19,13 +19,23 @@ alter table public.campaign_submissions add column quota_released boolean not nu
 -- Preserve every pre-existing reservation, including the owner's queued pilot.
 update public.campaign_submissions set quota_exempt=true;
 create function app_private.billing_bridge(token text,op text,payload jsonb default '{}'::jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
-declare r jsonb;
+declare r jsonb; c app_private.billing_customers%rowtype;
 begin
  if not exists(select 1 from app_private.billing_config where bridge_hash=encode(extensions.digest(token,'sha256'),'hex')) then raise exception 'Invalid billing authentication'; end if;
- if op='config' then select jsonb_build_object('webhookSecret',webhook_secret,'launch',subscriber_launch) into r from app_private.billing_config; return r;
+ if op='config' then select jsonb_build_object('webhookSecret',webhook_secret,'launch',subscriber_launch,'portalConfiguration',portal_configuration) into r from app_private.billing_config; return r;
+ elsif op='set_portal' then update app_private.billing_config set portal_configuration=payload->>'id';return '{}'::jsonb;
+ elsif op='checkout_claim' then
+   select * into c from app_private.billing_customers where user_id=(payload->>'userId')::uuid and livemode=(payload->>'livemode')::boolean for update;
+   if not found then raise exception 'Customer missing';end if;
+   if c.checkout_nonce is null or c.checkout_expires<now() then
+    update app_private.billing_customers set checkout_plan=payload->>'plan',checkout_id=null,checkout_nonce=gen_random_uuid(),checkout_expires=now()+interval '25 hours' where user_id=c.user_id and livemode=c.livemode returning * into c;
+   end if;
+   return jsonb_build_object('id',c.checkout_id,'nonce',c.checkout_nonce,'plan',c.checkout_plan);
+ elsif op='checkout_saved' then update app_private.billing_customers set checkout_id=payload->>'id' where user_id=(payload->>'userId')::uuid and livemode=(payload->>'livemode')::boolean and checkout_nonce=(payload->>'nonce')::uuid;return '{}'::jsonb;
+ elsif op='checkout_clear' then update app_private.billing_customers set checkout_nonce=null,checkout_id=null where user_id=(payload->>'userId')::uuid and livemode=(payload->>'livemode')::boolean and checkout_nonce=(payload->>'nonce')::uuid;return '{}'::jsonb;
  elsif op='set_hook' then update app_private.billing_config set webhook_secret=payload->>'secret';return '{}'::jsonb;
  elsif op='customer' then select jsonb_build_object('id',customer_id) into r from app_private.billing_customers where user_id=(payload->>'userId')::uuid and livemode=(payload->>'livemode')::boolean;return coalesce(r,'{}'::jsonb);
- elsif op='set_customer' then insert into app_private.billing_customers values((payload->>'userId')::uuid,payload->>'id',(payload->>'livemode')::boolean) on conflict(user_id,livemode) do nothing;return '{}'::jsonb;
+ elsif op='set_customer' then insert into app_private.billing_customers(user_id,customer_id,livemode) values((payload->>'userId')::uuid,payload->>'id',(payload->>'livemode')::boolean) on conflict(user_id,livemode) do nothing;return '{}'::jsonb;
  elsif op='subscription' then
    if not exists(select 1 from app_private.billing_customers where user_id=(payload->>'userId')::uuid and customer_id=payload->>'customerId' and livemode=(payload->>'livemode')::boolean) then raise exception 'Customer mismatch';end if;
    insert into app_private.subscriptions values(payload->>'id',(payload->>'userId')::uuid,payload->>'customerId',payload->>'plan',payload->>'status',(payload->>'periodEnd')::timestamptz,(payload->>'livemode')::boolean,(payload->>'eventCreated')::bigint)
