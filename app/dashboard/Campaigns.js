@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {supabase} from "../../lib/supabaseClient";
+import Usage from "./Usage";
 import Scheduler from "./Scheduler";
 import MediaUpload from "./MediaUpload";
 import {withDeadline} from "../../lib/deadline.mjs";
@@ -93,6 +94,7 @@ export default function Campaigns({user}){
   document.getElementById("campaign-heading")?.scrollIntoView({behavior:"smooth"});
  }
  return <section className="campaigns" aria-labelledby="campaign-heading">
+  <Usage at={timing==="later" && date && time && Number.isFinite(Date.parse(`${date}T${time}`)) ? new Date(`${date}T${time}`).toISOString() : undefined} refreshKey={historyKey}/>
   <h2 id="campaign-heading">Create your post</h2><p>Upload. Choose your platforms. Get ready, then publish.</p>
   {notice && <p role="status">{notice}</p>}
   <details className="social-settings"><summary>Social accounts · one-time setup</summary><p>Authorize your social accounts once. We check them automatically when you prepare a post. Secure authorization opens our publishing partner; your passwords are never entered here.</p>
@@ -127,3 +129,4 @@ export default function Campaigns({user}){
   <Scheduler userId={user.id} refreshKey={historyKey}/>
  </section>;
 }
+

@@ -1,3 +1,4 @@
+import {usage,bridge} from "../../../../lib/billing";
 import {randomUUID} from "node:crypto";
 import {authenticate} from "../../../../lib/server-auth";
 import {APP_ORIGIN,seal,unseal,inspectAccounts,withMetricool,toolData} from "../../../../lib/metricool-oauth.mjs";
@@ -41,6 +42,8 @@ export async function POST(request) {
       const {data:prior,error:priorError}=await auth.client.from("campaign_submissions").select("id").eq("user_id",auth.user.id).eq("draft_id",draft.id).maybeSingle();
       if(priorError)throw new Error("Unable to check this post. Please try Ready to Publish again.");
       if(prior)throw new Error("This draft already has a publishing attempt. See Your posts before trying another copy.");
+      const allowance=await usage(auth,draft.planned_at);
+      if(!allowance.canPublish)throw new Error(allowance.reason);
       const post=buildPost(draft,options);
       const access=await connection(auth), brands=await inspectAccounts(access);
       const brand=body.brandId ? brands.find(b=>b.id===String(body.brandId)) : brands.length===1 ? brands[0] : null;
@@ -61,7 +64,7 @@ export async function POST(request) {
   } catch(e) {return reply({message:e.message || "Invalid preview."},400);}
   // Insert the unique attempt BEFORE any provider write. Never retry an uncertain write.
   const {error:claimError}=await auth.client.from("campaign_submissions").insert({id:pending.id,user_id:auth.user.id,draft_id:pending.draftId,snapshot:{title:pending.draft.title,platforms:pending.draft.platforms,planned_at:pending.draft.planned_at,caption:pending.draft.caption,media_url:pending.draft.media_url,brand_id:pending.brandId}});
-  if(claimError) return reply({message:claimError.code==="23505" ? "This draft already has a publishing attempt. See Your posts before creating another copy." : "Unable to record the submission. No post was sent."},409);
+  if(claimError) return reply({message:claimError.code==="23505" ? "This draft already has a publishing attempt. See Your posts before creating another copy." : claimError.message?.includes("Subscriber publishing") || claimError.message?.includes("allowance") || claimError.message?.includes("paid period") || claimError.message?.includes("queue is full") || claimError.message?.includes("artist profile") ? claimError.message : "Unable to record the submission. No post was sent."},409);
   let status="unknown",message="The publishing result is awaiting confirmation. Do not create another copy until this attempt has been checked.",plannerUrl=null,providerId=null;
   try {
     const result=await withMetricool(access,call=>call("createscheduledpost",{blogId:pending.brandId,date:pending.post.publicationDate.dateTime+"Z",info:JSON.stringify(pending.post)}));
@@ -73,8 +76,10 @@ export async function POST(request) {
       if(providerId || plannerUrl) {status="accepted";message="Your post is queued for the selected time. Publication has not yet been verified.";}
     }
   } catch {} // No retry: timeout may occur after the provider accepted the post.
+  if(status==="rejected") {try{await bridge("release",{id:pending.id,userId:auth.user.id});}catch{}}
   const evidence={id:pending.id,userId:auth.user.id,status,message,plannerUrl,providerId};
   const {error:saveError}=await auth.client.from("campaign_submissions").update({evidence,evidence_signature:signResult(evidence)}).eq("id",pending.id).eq("user_id",auth.user.id);
   if(saveError) return reply({message:"Your post was sent, but its result could not be saved. Do not retry until this attempt has been checked.",status:"unknown"},502);
   return reply({status,message,plannerUrl},status==="accepted" ? 200 : 502);
 }
+
