@@ -1,54 +1,25 @@
-
-import Stripe from "stripe";
-
-
-const priceMap = {
-  starter: "price_1TSvMnLLCK65C4jJWDUCrUNn",
-  growth: "price_1TSvQFLLCK65C4jJ2tMkf68m",
-  executive: "price_1TSvRaLLCK65C4jJkTGmSnHV",
-};
-
-export async function POST(request) {
-  try {
-    const { plan } = await request.json();
-
-    const priceId = priceMap[plan];
-
-    if (!priceId) {
-      return Response.json(
-        { error: "Invalid subscription plan." },
-        { status: 400 }
-      );
-    }
-
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return Response.json({ error: "Checkout is currently unavailable. Please try again later." }, { status: 503 });
-    }
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const origin = new URL(request.url).origin;
-
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-
-      payment_method_types: ["card"],
-
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-
-      success_url: `${origin}/dashboard?payment=success`,
-
-      cancel_url: `${origin}/pricing?payment=cancelled`,
-    });
-
-    return Response.json({ url: session.url });
-  } catch (error) {
-    return Response.json(
-      { error: "Unable to start checkout. Please try again later." },
-      { status: 500 }
-    );
-  }
+import {billingAuth,bridge,stripeClient,customerFor,json} from "../../../lib/billing";
+import {PLANS} from "../../../lib/plans.mjs";
+import {APP_ORIGIN} from "../../../lib/metricool-oauth.mjs";
+export const dynamic="force-dynamic";
+export async function POST(request){
+ let auth;try{auth=await billingAuth(request,true);}catch{return json({error:"Please sign in to subscribe."},401);}
+ try{
+ const {plan,test}=await request.json();const p=PLANS[plan];if(!p)return json({error:"Choose an artist plan."},400);
+ const stripe=stripeClient(),config=await bridge('config');
+ const isTest=process.env.STRIPE_SECRET_KEY.startsWith('sk_test_')||process.env.STRIPE_SECRET_KEY.startsWith('rk_test_');
+ const{data:access,error}=await auth.client.rpc('promotion_usage');if(error)throw new Error('Unable to check account.');
+ if(isTest){if(!access.owner||test!==true)return json({error:"Billing is currently in owner test mode."},403);}
+ else if(!config.launch)return json({error:"Subscriptions open after publishing setup and payment testing are complete."},503);
+ if(!config.webhookSecret)return json({error:"Payment verification must be configured before checkout."},503);
+ const customer=await customerFor(stripe,auth.user);
+ const existing=await stripe.subscriptions.list({customer,status:'all',limit:100});
+ if(existing.data.some(s=>['active','trialing','past_due','unpaid','incomplete','paused'].includes(s.status)))return json({error:"You already have a subscription. Use Manage subscription."},409);
+ // Both amount and plan are selected from the server catalog, never from client prices.
+ const session=await stripe.checkout.sessions.create({mode:'subscription',customer,client_reference_id:auth.user.id,
+ line_items:[{quantity:1,price_data:{currency:'gbp',unit_amount:p.pence,tax_behavior:'inclusive',recurring:{interval:'month'},product_data:{name:p.name,metadata:{app_plan:plan}}}}],
+ metadata:{app_user_id:auth.user.id,app_plan:plan},subscription_data:{metadata:{app_user_id:auth.user.id,app_plan:plan}},
+ success_url:`${APP_ORIGIN}/dashboard?payment=returned`,cancel_url:`${APP_ORIGIN}/pricing?payment=cancelled`},
+ {idempotencyKey:`music-checkout-${auth.user.id}-${plan}-${Math.floor(Date.now()/600000)}`});return json({url:session.url,test:isTest});
+ }catch{return json({error:"Checkout is unavailable. No subscription has been activated. Please retry later."},503);}
 }
