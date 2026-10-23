@@ -132,7 +132,7 @@ export default function DashboardPage() {
   return (
     <main className="container studio-ui">
       <section className="hero dashboard-shell">
-        <header className="studio-header"><div><span className="studio-eyebrow">MUSIC PROMOTION SECRETARY</span><h1>Your music. Your next move.</h1><p>Create a release, choose your audience, and watch your promotion take shape.</p></div><span className="studio-mark" aria-hidden="true">♫</span></header><div className="studio-workflow"><a href="#campaign-heading">01 · Create your post</a><span>02 · Review your release</span><span>03 · Publish &amp; track</span></div>
+        <header className="studio-header"><div><span className="studio-eyebrow">MUSIC PROMOTION SECRETARY</span><h1>Your music. Your next move.</h1><p>Create a release, choose your audience, and watch your promotion take shape.</p></div><a className="studio-nav" href="/help">Help &amp; publishing guide →</a></header><div className="studio-workflow"><a href="#campaign-heading">01 · Create your post</a><span>02 · Review your release</span><span>03 · Publish &amp; track</span></div>
 
         <p>Welcome, {user?.email}</p>
 
