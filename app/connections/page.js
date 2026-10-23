@@ -21,6 +21,6 @@ export default function Connections(){
  <button className="button" disabled={busy || !data?.available} onClick={connect}>{busy?'Please wait…':data?.connection?'Reconnect or change channel':'Connect YouTube with Google'}</button>{' '}<button disabled={busy} onClick={load}>Refresh connection</button>
  {data&&!data.available&&<p>YouTube connection is temporarily unavailable. Please try again later.</p>}
  </section><section className="activity-panel activity-waiting"><strong>Connection first. Publishing comes next.</strong><p>Connecting does not upload or publish any video and does not use a promotion allowance. Subscriber publishing is still being prepared. The owner upload pilot remains separate.</p><p>During testing, Google may allow only approved test accounts. Public subscriber onboarding requires the app's Google verification and publishing checks to be completed.</p></section>
- <p>To remove Google access, use <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">your Google account connections</a>. Reconnecting replaces only the channel saved for your app account.</p>
+ <p><a href="/social-connections">Facebook and TikTok connections →</a></p><p>To remove Google access, use <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">your Google account connections</a>. Reconnecting replaces only the channel saved for your app account.</p>
  </section></main>;
 }
