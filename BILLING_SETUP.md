@@ -36,3 +36,7 @@ Run `node --test tests/*.test.mjs` and `npm run build`. Run database/test-billin
 ### Recover an existing sandbox endpoint
 
 If setup finds a webhook but its one-time signing secret was not saved, reveal the signing secret for this app’s endpoint in Stripe’s TEST Workbench. Add it in Vercel as sensitive STRIPE_TEST_WEBHOOK_SECRET (Production). Redeploy, then run Prepare secure payment test. The server uses that mode-specific secret without changing the live API key, live webhook configuration, or creating a duplicate endpoint. STRIPE_WEBHOOK_SECRET is the separate optional live equivalent. Never paste either secret in chat or commit it.
+
+### Independent checkout and portal checks
+
+The owner test setup reports the exact failing stage using sanitized Stripe code/parameter fields, without returning raw errors or credentials. A cancellation portal failure no longer blocks sandbox checkout when webhook configuration is present; it returns portalReady=false and a visible warning. Cancellation remains a required launch check. Portal creation uses an app-specific idempotency key and omits optional branding/customer-edit fields. Missing webhook configuration still blocks preparation.
