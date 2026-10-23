@@ -1,7 +1,7 @@
 -- Run as a single transaction. All fixtures and changes are rolled back.
 begin;
 do $$
-declare uid uuid:=gen_random_uuid();draft uuid;result jsonb;i int;blocked boolean:=false;old_exempt int; claim1 jsonb; claim2 jsonb;
+declare uid uuid:=gen_random_uuid();draft uuid;result jsonb;i int;blocked boolean:=false;old_exempt int; claim1 jsonb; claim2 jsonb; tier record; reservation uuid;
 begin
  select count(*) into old_exempt from public.campaign_submissions where quota_exempt;
  insert into auth.users(id,email,created_at) values(uid,uid::text||'@billing-test.invalid',now());
@@ -56,6 +56,45 @@ begin
  result:=public.promotion_usage(now()+interval '2 hours');
  if (result->>'canPublish')::boolean then raise exception 'Scheduled beyond paid term';end if;
  if extract(epoch from ((timestamp '2027-03-29' at time zone 'Europe/London')-(timestamp '2027-03-22' at time zone 'Europe/London')))/3600<>167 then raise exception 'DST week boundary incorrect';end if;
+ -- Exercise every paid tier through the actual insert trigger, without provider calls.
+ update app_private.subscriptions set status='active',period_end=now()+interval '1 year';
+ delete from public.campaign_submissions where user_id=uid;
+ for tier in select * from (values ('starter',3,12),('growth',10,40),('executive',25,100)) as t(plan,weekly,queue_cap) loop
+  update app_private.subscriptions set plan=tier.plan;
+  for i in 1..tier.weekly loop
+   draft:=gen_random_uuid();
+   insert into public.campaign_drafts(id,user_id,title,caption,platforms)values(draft,uid,'Tier boundary','Test',array['youtube','facebook','tiktok']);
+   insert into public.campaign_submissions(id,user_id,draft_id,snapshot)values(gen_random_uuid(),uid,draft,jsonb_build_object('planned_at',now()+interval '2 minutes','brand_id','test-profile'));
+  end loop;
+  result:=public.promotion_usage(now()+interval '2 minutes');
+  if (result->>'remaining')::int<>0 or (result->>'used')::int<>tier.weekly or (result->>'queueLimit')::int<>tier.queue_cap then raise exception 'Wrong allowance for %',tier.plan;end if;
+  blocked:=false;
+  begin
+   insert into public.campaign_submissions(id,user_id,draft_id,snapshot)values(gen_random_uuid(),uid,draft,jsonb_build_object('planned_at',now()+interval '2 minutes','brand_id','test-profile'));
+  exception when raise_exception then blocked:=sqlerrm like '%allowance%';end;
+  if not blocked then raise exception 'Exceeded weekly allowance for %',tier.plan;end if;
+  result:=public.promotion_usage(now()+interval '7 days 2 minutes');
+  if (result->>'remaining')::int<>tier.weekly then raise exception 'Next week did not reset for %',tier.plan;end if;
+  select id into reservation from public.campaign_submissions where user_id=uid limit 1;
+  perform public.billing_bridge('fixture-only-token','release',jsonb_build_object('id',reservation,'userId',uid));
+  result:=public.promotion_usage(now()+interval '2 minutes');
+  if (result->>'remaining')::int<>1 then raise exception 'Released claim did not restore credit for %',tier.plan;end if;
+  blocked:=false;
+  begin
+   insert into public.campaign_submissions(id,user_id,draft_id,snapshot)values(gen_random_uuid(),uid,draft,jsonb_build_object('planned_at',now()+interval '2 minutes','brand_id','different-profile'));
+  exception when raise_exception then blocked:=sqlerrm like '%one artist profile%';end;
+  if not blocked then raise exception 'Artist profile binding bypass for %',tier.plan;end if;
+  delete from public.campaign_submissions where user_id=uid;
+  -- Fill future weeks legally to reach the independent queue cap.
+  for i in 1..tier.queue_cap loop
+   draft:=gen_random_uuid();
+   insert into public.campaign_drafts(id,user_id,title,caption,platforms)values(draft,uid,'Queue boundary','Test',array['youtube']);
+   insert into public.campaign_submissions(id,user_id,draft_id,snapshot)values(gen_random_uuid(),uid,draft,jsonb_build_object('planned_at',now()+interval '2 minutes'+(((i-1)/tier.weekly)*interval '7 days'),'brand_id','test-profile'));
+  end loop;
+  result:=public.promotion_usage(now()+interval '70 days');
+  if (result->>'queued')::int<>tier.queue_cap or (result->>'canPublish')::boolean or result->>'reason'<>'Your scheduled promotion queue is full.' then raise exception 'Queue cap failed for %',tier.plan;end if;
+  delete from public.campaign_submissions where user_id=uid;
+ end loop;
  perform set_config('request.jwt.claim.sub','d933f707-f948-410d-b107-9ba32b37274c',true);
  perform set_config('request.jwt.claims','{"sub":"d933f707-f948-410d-b107-9ba32b37274c","role":"authenticated"}',true);
  result:=public.promotion_usage();if not (result->>'owner')::boolean then raise exception 'Owner exemption missing';end if;
