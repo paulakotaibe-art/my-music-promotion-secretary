@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {billingMode,billingCredentials} from '../lib/billing-mode.mjs';
+import {billingMode,billingCredentials,webhookSecretFor} from '../lib/billing-mode.mjs';
 test('default test mode uses the separate test credential and leaves live configuration untouched',()=>{
  const env={STRIPE_SECRET_KEY:'sk_live_fixture',STRIPE_TEST_SECRET_KEY:'sk_test_fixture'};
  assert.equal(billingMode(env),'test');assert.deepEqual(billingCredentials(env),{key:'sk_test_fixture',testMode:true});assert.equal(env.STRIPE_SECRET_KEY,'sk_live_fixture');
@@ -9,4 +9,13 @@ test('default test mode uses the separate test credential and leaves live config
 test('missing or misconfigured test credentials never fall back to a live key',()=>{
  for(const env of [{STRIPE_SECRET_KEY:'sk_live_fixture'},{STRIPE_SECRET_KEY:'sk_live_fixture',STRIPE_TEST_SECRET_KEY:'sk_live_wrong'},{STRIPE_TEST_SECRET_KEY:'pk_test_wrong'},{BILLING_MODE:'mistyped',STRIPE_SECRET_KEY:'sk_live_fixture'}])assert.throws(()=>billingCredentials(env));
  assert.throws(()=>billingCredentials({BILLING_MODE:'live',STRIPE_SECRET_KEY:'sk_test_wrong'}));
+});
+
+test('recover an existing sandbox webhook without replacing live configuration',()=>{
+ const env={STRIPE_WEBHOOK_SECRET:'whsec_live_fixture',STRIPE_TEST_WEBHOOK_SECRET:'whsec_test_fixture'};
+ assert.equal(webhookSecretFor({webhookSecret:null},false,env),'whsec_test_fixture');
+ assert.equal(webhookSecretFor({webhookSecret:null},true,env),'whsec_live_fixture');
+ assert.equal(webhookSecretFor({webhookSecret:'whsec_stored_test'},false,{STRIPE_WEBHOOK_SECRET:'whsec_live_fixture'}),'whsec_stored_test');
+ assert.equal(webhookSecretFor({webhookSecret:null},false,{STRIPE_WEBHOOK_SECRET:'whsec_live_fixture'}),null);
+ assert.throws(()=>webhookSecretFor({webhookSecret:null},false,{STRIPE_TEST_WEBHOOK_SECRET:'sk_test_wrong'}));
 });
