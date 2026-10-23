@@ -14,11 +14,11 @@ Subscriptions only become entitlements following signature-verified Stripe event
 
 ## Owner payment test
 
-Visit `/billing-test`, signed in as the verified owner. Prepare secure payment test checks that the configured Stripe key is TEST, creates its webhook and cancellation portal configuration, and stores the signing secret in the private configuration. The signing secret is never returned to the client. Existing webhook with lost secret requires secure owner configuration rather than blind duplication. No live key is used by this setup operation. If the installed sensitive STRIPE_SECRET_KEY is live, the page will request a TEST key update in Vercel. Never paste secrets into chat.
+Visit `/billing-test`, signed in as the verified owner. Prepare secure payment test checks that the configured Stripe key is TEST, creates its webhook and cancellation portal configuration, and stores the signing secret in the private configuration. The signing secret is never returned to the client. Existing webhook with lost secret requires secure owner configuration rather than blind duplication. No live key is used by this setup operation. Keep STRIPE_SECRET_KEY unchanged. Add STRIPE_TEST_SECRET_KEY in Vercel. BILLING_MODE defaults to test; missing or invalid test credentials fail closed and never fall back to live credentials. Never paste secrets into chat.
 
 Choose a plan and finish Stripe test checkout. Confirm verified test subscription on dashboard, replay webhook without duplicated state, test card failure, cancel in portal, and verify no live quota is granted. Checkout return query is never payment proof. Test and live customers are stored separately.
 
-Before real launch: configure LIVE key and matching LIVE webhook secret (the existing test hook secret must be replaced), confirm tax/customer terms, and validate live Stripe portal configuration. Only then may an administrator enable subscriber_launch directly in the database. Do not enable it from a browser or customer-controlled metadata. Current single switch deliberately gates both paying signups and subscriber publication.
+Before real launch: configure the LIVE key and matching LIVE webhook secret and portal in their separate live configuration fields; retain the test configuration. Explicitly set BILLING_MODE=live only after launch readiness is confirmed, confirm tax/customer terms, and validate live Stripe portal configuration. Only then may an administrator enable subscriber_launch directly in the database. Do not enable it from a browser or customer-controlled metadata. Current single switch deliberately gates both paying signups and subscriber publication.
 
 ## Publishing vendor assessment (22 October 2026)
 
@@ -31,3 +31,4 @@ Recommendation: retain the Metricool owner pilot. Do not buy or migrate until a 
 ## Verification
 
 Run `node --test tests/*.test.mjs` and `npm run build`. Run database/test-billing.sql as a single transaction; fixtures roll back. It checks launch closure, invalid bridge auth, three-trial limit, spoofed exemptions, owner exemption, immutable quota privileges, test/live separation, paid weekly allowance, failed payment removal, paid-term bound and DST. It never writes to the publishing provider.
+

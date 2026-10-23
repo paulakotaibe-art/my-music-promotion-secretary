@@ -26,6 +26,14 @@ begin
  if has_column_privilege('authenticated','public.campaign_submissions','quota_exempt','UPDATE') or has_table_privilege('authenticated','app_private.subscriptions','UPDATE') then raise exception 'Client billing privilege leak';end if;
  insert into app_private.billing_customers(user_id,customer_id,livemode) values(uid,'cus_fixture',true);
  update app_private.billing_config set bridge_hash=encode(extensions.digest('fixture-only-token','sha256'),'hex');
+ perform public.billing_bridge('fixture-only-token','set_hook','{"livemode":true,"secret":"live-fixture"}');
+ perform public.billing_bridge('fixture-only-token','set_hook','{"livemode":false,"secret":"test-fixture"}');
+ perform public.billing_bridge('fixture-only-token','set_portal','{"livemode":true,"id":"live-portal"}');
+ perform public.billing_bridge('fixture-only-token','set_portal','{"livemode":false,"id":"test-portal"}');
+ result:=public.billing_bridge('fixture-only-token','config','{"livemode":true}');
+ if result->>'webhookSecret'<>'live-fixture' or result->>'portalConfiguration'<>'live-portal' then raise exception 'Test setup changed live configuration';end if;
+ result:=public.billing_bridge('fixture-only-token','config','{"livemode":false}');
+ if result->>'webhookSecret'<>'test-fixture' or result->>'portalConfiguration'<>'test-portal' then raise exception 'Sandbox configuration missing';end if;
  claim1:=public.billing_bridge('fixture-only-token','checkout_claim',jsonb_build_object('userId',uid,'livemode',true,'plan','starter'));
  claim2:=public.billing_bridge('fixture-only-token','checkout_claim',jsonb_build_object('userId',uid,'livemode',true,'plan','growth'));
  if claim1->>'nonce'<>claim2->>'nonce' or claim2->>'plan'<>'starter' then raise exception 'Parallel plan selection bypassed single checkout';end if;
@@ -51,3 +59,4 @@ begin
  if old_exempt<>(select count(*) from public.campaign_submissions where quota_exempt) then raise exception 'Existing reservation changed';end if;
 end $$;
 rollback;
+
