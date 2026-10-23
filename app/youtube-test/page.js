@@ -20,6 +20,9 @@ export default function DirectYouTube(){
  {message&&<p role="status">{message}</p>}
  <button disabled={busy} onClick={load}>{busy?'Working…':'Refresh upload status'}</button>
  {data&&<>
+ <section role="status" aria-live="polite" style={{padding:'16px',margin:'16px 0',border:'1px solid currentColor',borderRadius:12}}>
+ {data.publicReady?<><strong>✓ Ready for public publishing</strong><p>Your private test has finished processing. You can now choose Public now or Schedule public release.</p></>:data.uploads.some(u=>u.liveVerified && u.processingStatus==='processing' && !u.failed)?<><strong>⏳ YouTube is still processing your video</strong><p>Your upload has arrived. Please wait while YouTube prepares it for playback. Public publishing and scheduling will unlock after processing finishes.</p><p>You do not need to upload it again. Use Refresh upload status to check progress.</p></>:data.uploads.some(u=>u.failed)?<><strong>Video needs attention</strong><p>YouTube reported a processing failure. Open the video in YouTube Studio for details before trying again.</p></>:data.uploads.length?<><strong>Waiting for YouTube confirmation</strong><p>We cannot yet confirm that processing has finished. Refresh upload status, or check the video in YouTube Studio. You do not need to upload another copy.</p></>:<><strong>Start with a private test</strong><p>Upload your video privately first. Its processing progress will appear here.</p></>}
+ </section>
  <form onSubmit={e=>{e.preventDefault();setReview(true);}} onChange={()=>setReview(false)}>
  <p><label>Saved video <select required value={draftId} onChange={e=>setDraft(e.target.value)}><option value="">Choose your video</option>{data.drafts.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select></label></p>
  {!data.drafts.length&&<p><a href="/dashboard">Upload an MP4 in the release studio and save its draft first.</a></p>}
@@ -32,7 +35,7 @@ export default function DirectYouTube(){
  </form>
  {review&&<section aria-label="Review upload"><h2>Review your upload</h2><p>{data.drafts.find(d=>d.id===draftId)?.title}</p><p>Visibility: {mode}. {mode==='scheduled'&&new Date(date).toLocaleString()}</p><p>YouTube receives a new video copy. A private test is visible only to authorized viewers.</p><button className="button" disabled={busy} onClick={publish}>{mode==='private'?'Upload private test':'Publish'}</button></section>}
  <h2>Your direct uploads</h2>
- {data.uploads.map(u=><article key={u.id}><p>{u.mode} · {u.privacy || 'Unconfirmed'} · {u.failed?'YouTube reported a failure':u.processed?'Processed':'Processing or awaiting confirmation'}{!u.liveVerified?' · Current status not verified':''}</p>{u.publishAt&&<p>Release: {new Date(u.publishAt).toLocaleString()}</p>}<p>{u.message}</p>{u.url&&<a href={u.url} target="_blank" rel="noopener noreferrer">Open video on YouTube</a>}</article>)}
+ {data.uploads.map(u=><article key={u.id}><p>{u.mode} · {u.privacy || 'Unconfirmed'} · {u.failed?'YouTube reported a failure':u.processed?'Processed':u.liveVerified && u.processingStatus==='processing'?'⏳ Still processing on YouTube':'Awaiting processing confirmation'}{!u.liveVerified?' · Current status not verified':''}</p>{u.publishAt&&<p>Release: {new Date(u.publishAt).toLocaleString()}</p>}<p>{u.message}</p>{u.url&&<a href={u.url} target="_blank" rel="noopener noreferrer">Open video on YouTube</a>}</article>)}
  </>}
  <p><a href="/publishing-setup">Connection setup</a> · <a href="/dashboard">Dashboard</a></p>
  </section></main>;
