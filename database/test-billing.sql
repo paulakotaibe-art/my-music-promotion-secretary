@@ -40,9 +40,12 @@ begin
  perform public.billing_bridge('fixture-only-token','checkout_saved',jsonb_build_object('userId',uid,'livemode',true,'nonce',claim1->>'nonce','id','cs_fixture'));
  claim2:=public.billing_bridge('fixture-only-token','checkout_claim',jsonb_build_object('userId',uid,'livemode',true,'plan','starter'));
  if claim2->>'id'<>'cs_fixture' then raise exception 'Existing checkout session was not reused';end if;
- insert into app_private.subscriptions values('sub_fixture',uid,'cus_fixture','growth','active',now()+interval '1 year',false,1);
+ insert into app_private.billing_customers(user_id,customer_id,livemode) values(uid,'cus_test_fixture',false);
+ insert into app_private.subscriptions values('sub_fixture',uid,'cus_test_fixture','growth','active',now()+interval '1 year',false,1,false);
  result:=public.promotion_usage(now()+interval '2 minutes');
  if result->>'plan'<>'trial' then raise exception 'Test payment granted live allowance';end if;
+ perform public.billing_bridge('fixture-only-token','subscription',jsonb_build_object('id','sub_fixture','userId',uid,'customerId','cus_test_fixture','plan','growth','status','active','periodEnd',now()+interval '1 year','livemode',false,'eventCreated',2,'cancelAtPeriodEnd',true));
+ if not (select cancel_at_period_end from app_private.subscriptions where subscription_id='sub_fixture') then raise exception 'Cancellation event was not persisted';end if;
  update app_private.subscriptions set livemode=true;
  result:=public.promotion_usage(now()+interval '2 minutes');
  if result->>'plan'<>'growth' or (result->>'remaining')::int<>7 then raise exception 'Paid weekly allowance not applied';end if;
