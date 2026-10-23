@@ -36,16 +36,16 @@ async function save(auth,outcome){
 }
 async function owner(request,mutating){
  const auth=await billingAuth(request,mutating);
- if(!(await usage(auth)).owner)throw Error('Direct publishing is limited to the owner pilot.');
  return auth;
 }
 export async function GET(request){
- let auth;try{auth=await owner(request,false);}catch{return json({message:'Sign in with the app owner account.'},403);}
+ let auth;try{auth=await owner(request,false);}catch{return json({message:'Please sign in.'},403);}
  try{
   const {data:rows,error}=await auth.client.from('youtube_uploads').select('*').eq('user_id',auth.user.id).order('created_at',{ascending:false}).limit(20);
   const {data:drafts,error:de}=await auth.client.from('campaign_drafts').select('id,title,media_url,media_kind').eq('user_id',auth.user.id).order('created_at',{ascending:false}).limit(50);
   if(error || de)throw Error('Unable to load your upload attempts.');
   let ctx;try{ctx=await context(auth,AbortSignal.timeout(20000));}catch{}
+  const allowance=await usage(auth);
   let publicReady=false;
   const uploads=[];
   for(const row of rows || []){
@@ -56,11 +56,11 @@ export async function GET(request){
    if(live && row.mode==='private' && o?.verified && o.processed && o.privacy==='private')publicReady=true;
    uploads.push({id:row.id,mode:row.mode,createdAt:row.created_at,...(o?{videoId:o.videoId,url:o.url,privacy:o.privacy,publishAt:o.publishAt,processed:o.processed,processingStatus:o.processingStatus || 'unknown',verified:o.verified,failed:o.failed}:{}),liveVerified:live,message:o?.message || 'Outcome unconfirmed. Check YouTube Studio before another copy.'});
   }
-  return json({uploads,publicReady,drafts:(drafts || []).filter(d=>d.media_kind!=='audio' && /\.mp4$/i.test(d.media_url || '')).map(d=>({id:d.id,title:d.title}))});
+  return json({uploads,owner:allowance.owner,canPublish:allowance.canPublish,publicReady:allowance.owner?publicReady:allowance.canPublish,drafts:(drafts || []).filter(d=>d.media_kind!=='audio' && /\.mp4$/i.test(d.media_url || '')).map(d=>({id:d.id,title:d.title}))});
  }catch{return json({message:'Unable to check uploads. Reconnect YouTube if authorization has expired.'},503);}
 }
 export async function POST(request){
- let auth;try{auth=await owner(request,true);}catch{return json({message:'Sign in with the app owner account from the app.'},403);}
+ let auth;try{auth=await owner(request,true);}catch{return json({message:'Sign in from the app.'},403);}
  let id,outcome;
  try{
   const raw=await request.text();if(raw.length>4000)throw Error('Invalid upload request.');
@@ -69,8 +69,11 @@ export async function POST(request){
   if(error || !draft)throw Error('Choose a saved video draft.');
   if(!ownedMediaUrl(draft.media_url,auth.user.id) || !/\.mp4$/i.test(draft.media_url) || draft.media_kind==='audio')throw Error('Upload an MP4 video to your release studio and save the draft first.');
   const metadata=videoMetadata(draft,body);
+  const allowance=await usage(auth,body.mode==='scheduled'?metadata.status.publishAt:undefined);
+  if(!allowance.owner && body.mode==='private')throw Error('Private tests are limited to the owner pilot.');
+  if(!allowance.canPublish)throw Error(allowance.reason || 'Publishing is not available.');
   const signal=AbortSignal.timeout(40000),{connection:c,call}=await context(auth,signal);
-  if(body.mode!=='private'){
+  if(allowance.owner && body.mode!=='private'){
    const {data:rows,error:e}=await auth.client.from('youtube_uploads').select('*').eq('user_id',auth.user.id).eq('mode','private').eq('channel_id',c.channel_id).limit(20);
    if(e)throw Error('Unable to verify the private test.');
    let passed=false;
@@ -84,7 +87,7 @@ export async function POST(request){
   const bytes=await readVideo(media);
   const attempt=randomUUID();
   const {error:ce}=await auth.client.from('youtube_uploads').insert({id:attempt,user_id:auth.user.id,draft_id:draft.id,channel_id:c.channel_id,mode:body.mode,expected:metadata.status});
-  if(ce)return json({message:ce.code==='23505'?'This draft already has an attempt in that mode. Check its status before another copy.':'No upload was sent: unable to record this attempt.'},409);
+  if(ce)return json({message:ce.code==='23505'?'This draft already has an attempt in that mode. Check its status before another copy.':'No upload was sent. Your allowance, channel binding or an existing draft reservation prevented this attempt. Check your usage and Your posts.'},409);
   id=attempt;
   outcome={id,userId:auth.user.id,channelId:c.channel_id,mode:body.mode,verified:false,message:'The upload outcome needs confirmation. Do not create another copy before checking YouTube Studio.'};
   const videoId=await uploadOnce(call,bytes,metadata);

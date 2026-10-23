@@ -23,6 +23,7 @@ export async function GET(request) {
   return reply({submissions:data.map(row=>{
     const valid=row.evidence && verifyResult(row.evidence,row.evidence_signature) && row.evidence.id===row.id && row.evidence.userId===auth.user.id;
     const legacy=valid && row.evidence.status==="accepted" && !Array.isArray(row.evidence.confirmedPlatforms);
+    if(row.snapshot.provider==='direct_youtube')return {id:row.id,draft_id:row.draft_id,title:row.snapshot.title,platforms:row.snapshot.platforms,date:row.snapshot.planned_at,status:'unknown',direct:true,message:'Direct YouTube attempt reserved. Open YouTube Studio in this app to refresh its processing and publication status.',directUrl:'/youtube-test'};
     return {id:row.id,draft_id:row.draft_id,title:row.snapshot.title,platforms:row.snapshot.platforms,date:row.snapshot.planned_at,status:valid && !legacy ? row.evidence.status : "unknown",message:legacy ? "This older receipt confirms submission only. Its current platforms and publication time need checking before another copy is created." : valid ? row.evidence.message : "Submission outcome is unconfirmed. Check Metricool before trying another post.",plannerUrl:valid ? safePlannerUrl(row.evidence.plannerUrl) : null};
   })});
 }
