@@ -14,7 +14,7 @@ export default function PublishingSetup(){
  useEffect(()=>{load().then(()=>{const result=new URLSearchParams(window.location.search).get('youtube');if(result==='failed')setMessage('Google authorization did not finish. Check the client settings, test user and both permissions, then retry.');if(result==='connected')setMessage('YouTube authorization was saved. Check the channel below. Direct publishing is not enabled yet.');});},[]);
  async function connect(){setBusy(true);setMessage('');try{const data=await request('/api/integrations/youtube/connect','POST');window.location.assign(data.url);}catch(e){setMessage(e.message);setBusy(false);}}
  return <main className="container"><section className="hero"><h1>Owner: direct publishing setup</h1>
- <p>Start with the YouTube connection. Direct video uploading and scheduled delivery are still being built; a connected account does not mean publishing is ready.</p>
+ <p>Start with the YouTube connection. The owner upload pilot is available below. A connected account does not mean subscriber publishing is ready.</p>
  {message&&<p role="alert">{message}</p>}
  <button className="button" disabled={busy} onClick={load}>{busy?'Checking…':'Refresh setup status'}</button>
  {setup&&<>
@@ -32,9 +32,9 @@ export default function PublishingSetup(){
  <p>{setup.youtube.connection?`Saved channel: ${setup.youtube.connection.channel_title}. Authorization may expire or be revoked.`:'No direct YouTube channel has been saved.'}</p>
  <button className="button" disabled={busy || !setup.youtube.credentialsConfigured} onClick={connect}>Authorize YouTube channel</button>
  <p>After Google returns here, refresh the status. A saved channel confirms connection storage only. No video is published by this button.</p>
- <h2>3. Finish Facebook and TikTok</h2>
+ <h2>3. Test direct video delivery</h2><p><a href="/youtube-test">Open the direct YouTube upload pilot</a>. Start with a private test. Public scheduling is available only after the private video is verified as processed.</p><h2>4. Finish Facebook and TikTok</h2>
  <p>Next, register the app with <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer">Meta for Developers</a> and <a href="https://developers.tiktok.com/" target="_blank" rel="noopener noreferrer">TikTok for Developers</a>. Their connection and publishing integrations are pending. TikTok public Direct Post requires its audit.</p>
- <h2>4. Prove subscriber publishing</h2>
+ <h2>5. Prove subscriber publishing</h2>
  <p>After the direct publishing worker and platform permissions are ready, run one ordinary subscriber through upload, scheduling, three working public posts, and one allowance deduction. Paid launch stays closed until that succeeds.</p>
  </>}
  <p><a href="/dashboard">Return to dashboard</a></p>
