@@ -40,3 +40,7 @@ If setup finds a webhook but its one-time signing secret was not saved, reveal t
 ### Independent checkout and portal checks
 
 The owner test setup reports the exact failing stage using sanitized Stripe code/parameter fields, without returning raw errors or credentials. A cancellation portal failure no longer blocks sandbox checkout when webhook configuration is present; it returns portalReady=false and a visible warning. Cancellation remains a required launch check. Portal creation uses an app-specific idempotency key and omits optional branding/customer-edit fields. Missing webhook configuration still blocks preparation.
+
+### In-app subscription management
+
+The dashboard Manage subscription button loads Stripe subscription details inside the app, with visible loading, focused errors and an explicit Yes, cancel renewal confirmation. The authenticated cancellation endpoint validates customer, app-user metadata and test/live mode before setting cancel_at_period_end=true. It does not refund or terminate access immediately. Stripe webhooks persist the renewal-cancellation flag in the subscription record. This flow does not depend on the optional Stripe customer portal; cancellation still requires an end-to-end owner test before launch.

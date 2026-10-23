@@ -9,7 +9,7 @@ create table app_private.app_owners(user_id uuid primary key references auth.use
 alter table app_private.app_owners enable row level security;
 create table app_private.billing_customers(user_id uuid references auth.users(id), customer_id text unique not null, livemode boolean not null, checkout_plan text, checkout_id text, checkout_nonce uuid, checkout_expires timestamptz, primary key(user_id,livemode));
 alter table app_private.billing_customers enable row level security;
-create table app_private.subscriptions(subscription_id text primary key,user_id uuid not null references auth.users(id),customer_id text not null,plan text not null check(plan in ('starter','growth','executive')),status text not null,period_end timestamptz not null,livemode boolean not null,event_created bigint not null);
+create table app_private.subscriptions(subscription_id text primary key,user_id uuid not null references auth.users(id),customer_id text not null,plan text not null check(plan in ('starter','growth','executive')),status text not null,period_end timestamptz not null,livemode boolean not null,event_created bigint not null,cancel_at_period_end boolean not null default false);
 alter table app_private.subscriptions enable row level security;
 create index on app_private.subscriptions(user_id);
 create table app_private.artist_profiles(user_id uuid primary key references auth.users(id),brand_id text unique not null);
@@ -38,8 +38,8 @@ begin
  elsif op='set_customer' then insert into app_private.billing_customers(user_id,customer_id,livemode) values((payload->>'userId')::uuid,payload->>'id',(payload->>'livemode')::boolean) on conflict(user_id,livemode) do nothing;return '{}'::jsonb;
  elsif op='subscription' then
    if not exists(select 1 from app_private.billing_customers where user_id=(payload->>'userId')::uuid and customer_id=payload->>'customerId' and livemode=(payload->>'livemode')::boolean) then raise exception 'Customer mismatch';end if;
-   insert into app_private.subscriptions values(payload->>'id',(payload->>'userId')::uuid,payload->>'customerId',payload->>'plan',payload->>'status',(payload->>'periodEnd')::timestamptz,(payload->>'livemode')::boolean,(payload->>'eventCreated')::bigint)
-   on conflict(subscription_id) do update set status=excluded.status,plan=excluded.plan,period_end=excluded.period_end,event_created=excluded.event_created
+   insert into app_private.subscriptions values(payload->>'id',(payload->>'userId')::uuid,payload->>'customerId',payload->>'plan',payload->>'status',(payload->>'periodEnd')::timestamptz,(payload->>'livemode')::boolean,(payload->>'eventCreated')::bigint,coalesce((payload->>'cancelAtPeriodEnd')::boolean,false))
+   on conflict(subscription_id) do update set status=excluded.status,plan=excluded.plan,period_end=excluded.period_end,event_created=excluded.event_created,cancel_at_period_end=excluded.cancel_at_period_end
    where app_private.subscriptions.user_id=excluded.user_id and app_private.subscriptions.livemode=excluded.livemode and app_private.subscriptions.event_created<=excluded.event_created;
    return '{}'::jsonb;
  elsif op='release' then update public.campaign_submissions set quota_released=true where id=(payload->>'id')::uuid and user_id=(payload->>'userId')::uuid;return '{}'::jsonb;

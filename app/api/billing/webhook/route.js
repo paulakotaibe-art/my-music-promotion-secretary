@@ -18,7 +18,7 @@ export async function POST(request){
  if(!plan||!s.metadata?.app_user_id)return json({received:true,ignored:true});
  const period=s.current_period_end||s.items.data[0]?.current_period_end;
  if(!period)throw new Error('Missing billing period');
- await bridge('subscription',{id:s.id,userId:s.metadata.app_user_id,customerId:typeof s.customer==='string'?s.customer:s.customer.id,plan,status:s.status,periodEnd:new Date(period*1000).toISOString(),livemode:s.livemode,eventCreated:event.created});
+ await bridge('subscription',{id:s.id,userId:s.metadata.app_user_id,customerId:typeof s.customer==='string'?s.customer:s.customer.id,plan,status:s.status,periodEnd:new Date(period*1000).toISOString(),livemode:s.livemode,eventCreated:event.created,cancelAtPeriodEnd:!!s.cancel_at_period_end});
  return json({received:true});
  }catch{return json({message:'Unable to update subscription; retry delivery.'},503);}
 }
