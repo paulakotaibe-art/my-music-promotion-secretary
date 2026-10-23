@@ -134,7 +134,7 @@ export default function DashboardPage() {
       <section className="hero dashboard-shell">
         <header className="studio-header"><div><span className="studio-eyebrow">MUSIC PROMOTION SECRETARY</span><h1>Your music. Your next move.</h1><p>Create a release, choose your audience, and watch your promotion take shape.</p></div><a className="studio-nav" href="/help">Help &amp; publishing guide →</a></header><div className="studio-workflow"><a href="#campaign-heading">01 · Create your post</a><span>02 · Review your release</span><span>03 · Publish &amp; track</span></div>
 
-        <p>Welcome, {user?.email}</p>
+        <p>Welcome, {user?.email}</p><p><a className="button" href="/connections">Connect your YouTube channel</a></p>
 
         <button onClick={handleLogout} className="button">
           Logout
