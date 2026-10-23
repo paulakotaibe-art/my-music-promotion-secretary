@@ -32,3 +32,7 @@ Recommendation: retain the Metricool owner pilot. Do not buy or migrate until a 
 
 Run `node --test tests/*.test.mjs` and `npm run build`. Run database/test-billing.sql as a single transaction; fixtures roll back. It checks launch closure, invalid bridge auth, three-trial limit, spoofed exemptions, owner exemption, immutable quota privileges, test/live separation, paid weekly allowance, failed payment removal, paid-term bound and DST. It never writes to the publishing provider.
 
+
+### Recover an existing sandbox endpoint
+
+If setup finds a webhook but its one-time signing secret was not saved, reveal the signing secret for this app’s endpoint in Stripe’s TEST Workbench. Add it in Vercel as sensitive STRIPE_TEST_WEBHOOK_SECRET (Production). Redeploy, then run Prepare secure payment test. The server uses that mode-specific secret without changing the live API key, live webhook configuration, or creating a duplicate endpoint. STRIPE_WEBHOOK_SECRET is the separate optional live equivalent. Never paste either secret in chat or commit it.

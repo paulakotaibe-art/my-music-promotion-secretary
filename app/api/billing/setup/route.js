@@ -9,7 +9,7 @@ export async function POST(request){let auth;try{auth=await billingAuth(request,
  const stripe=stripeClient(),config=await bridge('config');
  if(!config.webhookSecret){
  const hooks=await stripe.webhookEndpoints.list({limit:100});
- if(hooks.data.some(h=>h.url===`${APP_ORIGIN}/api/billing/webhook`))return json({message:'A webhook already exists. Configure its signing secret securely before continuing.'},409);
+ if(hooks.data.some(h=>h.url===`${APP_ORIGIN}/api/billing/webhook`))return json({message:'The existing test webhook needs its signing secret. In Stripe Test mode, open Developers → Webhooks, choose this app’s endpoint, reveal its Signing secret, and add it in Vercel as STRIPE_TEST_WEBHOOK_SECRET. Leave existing keys unchanged.'},409);
  const h=await stripe.webhookEndpoints.create({url:`${APP_ORIGIN}/api/billing/webhook`,enabled_events:['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','invoice.paid','invoice.payment_failed'],description:'Music Promotion Secretary subscription verification'});
  await bridge('set_hook',{secret:h.secret});
  }
