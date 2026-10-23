@@ -26,7 +26,7 @@ async function context(auth,signal){
 }
 async function inspect(call,id,channel,expected){
  if(!/^[a-zA-Z0-9_-]{11}$/.test(id || ''))throw Error('Video identifier unavailable.');
- const r=await call('https://www.googleapis.com/youtube/v3/videos?part=snippet%2Cstatus&id='+encodeURIComponent(id));
+ const r=await call('https://www.googleapis.com/youtube/v3/videos?part=snippet%2Cstatus%2CprocessingDetails&id='+encodeURIComponent(id));
  if(!r.ok)throw Error('YouTube status is temporarily unavailable.');
  const d=await r.json();return describeVideo(d.items?.[0],channel,expected);
 }
