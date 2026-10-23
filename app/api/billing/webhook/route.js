@@ -1,10 +1,13 @@
 import {bridge,stripeClient,json} from "../../../../lib/billing";
 import {verifiedPlan} from "../../../../lib/plans.mjs";
 export const dynamic="force-dynamic";
+export const maxDuration=60;
 export async function POST(request){
  const raw=await request.text();if(raw.length>1000000)return json({message:'Payload too large'},413);
  let stripe,event;
- try{stripe=stripeClient();const config=await bridge('config');event=stripe.webhooks.constructEvent(raw,request.headers.get('stripe-signature'),config.webhookSecret);}catch{return json({message:'Invalid webhook signature or configuration'},400);}
+ try{const claimedMode=JSON.parse(raw).livemode;if(typeof claimedMode!=='boolean')throw new Error('Missing mode');
+ // Mode is untrusted until this mode-specific signing secret authenticates the event.
+ stripe=stripeClient(claimedMode?'live':'test');const config=await bridge('config',{livemode:claimedMode});event=stripe.webhooks.constructEvent(raw,request.headers.get('stripe-signature'),config.webhookSecret);if(event.livemode!==claimedMode)throw new Error('Mode mismatch');}catch{return json({message:'Invalid webhook signature or configuration'},400);}
  try{
  const obj=event.data.object;
  let id=event.type.startsWith('customer.subscription.')?obj.id:obj.subscription||obj.parent?.subscription_details?.subscription;
@@ -19,3 +22,4 @@ export async function POST(request){
  return json({received:true});
  }catch{return json({message:'Unable to update subscription; retry delivery.'},503);}
 }
+

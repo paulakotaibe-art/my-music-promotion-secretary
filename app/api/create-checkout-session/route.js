@@ -1,13 +1,14 @@
-import {billingAuth,bridge,stripeClient,customerFor,json} from "../../../lib/billing";
+import {billingAuth,bridge,stripeClient,customerFor,json,billingMode} from "../../../lib/billing";
 import {PLANS} from "../../../lib/plans.mjs";
 import {APP_ORIGIN} from "../../../lib/metricool-oauth.mjs";
 export const dynamic="force-dynamic";
+export const maxDuration=60;
 export async function POST(request){
  let auth;try{auth=await billingAuth(request,true);}catch{return json({error:"Please sign in to subscribe."},401);}
  try{
  const {plan,test}=await request.json();const p=PLANS[plan];if(!p)return json({error:"Choose an artist plan."},400);
  const stripe=stripeClient(),config=await bridge('config');
- const isTest=process.env.STRIPE_SECRET_KEY.startsWith('sk_test_')||process.env.STRIPE_SECRET_KEY.startsWith('rk_test_');
+ const isTest=billingMode()==='test';
  const{data:access,error}=await auth.client.rpc('promotion_usage');if(error)throw new Error('Unable to check account.');
  if(isTest){if(!access.owner||test!==true)return json({error:"Billing is currently in owner test mode."},403);}
  else if(!config.launch)return json({error:"Subscriptions open after publishing setup and payment testing are complete."},503);
@@ -26,3 +27,4 @@ export async function POST(request){
  {idempotencyKey:`music-checkout-${claim.nonce}`});await bridge('checkout_saved',{userId:auth.user.id,livemode:!isTest,nonce:claim.nonce,id:session.id});return json({url:session.url,test:isTest});
  }catch{return json({error:"Checkout is unavailable. No subscription has been activated. Please retry later."},503);}
 }
+

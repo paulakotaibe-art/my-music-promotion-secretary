@@ -2,7 +2,7 @@
 create schema if not exists app_private;
 revoke all on schema app_private from public;
 grant usage on schema app_private to anon, authenticated;
-create table app_private.billing_config (id boolean primary key default true check(id), bridge_hash text not null, webhook_secret text, portal_configuration text, subscriber_launch boolean not null default false);
+create table app_private.billing_config (id boolean primary key default true check(id), bridge_hash text not null, webhook_secret text, portal_configuration text, test_webhook_secret text, test_portal_configuration text, subscriber_launch boolean not null default false);
 alter table app_private.billing_config enable row level security;
 -- Provision bridge_hash out of band; never commit the bridge token.
 create table app_private.app_owners(user_id uuid primary key references auth.users(id));
@@ -22,8 +22,8 @@ create function app_private.billing_bridge(token text,op text,payload jsonb defa
 declare r jsonb; c app_private.billing_customers%rowtype;
 begin
  if not exists(select 1 from app_private.billing_config where bridge_hash=encode(extensions.digest(token,'sha256'),'hex')) then raise exception 'Invalid billing authentication'; end if;
- if op='config' then select jsonb_build_object('webhookSecret',webhook_secret,'launch',subscriber_launch,'portalConfiguration',portal_configuration) into r from app_private.billing_config; return r;
- elsif op='set_portal' then update app_private.billing_config set portal_configuration=payload->>'id';return '{}'::jsonb;
+ if op='config' then select jsonb_build_object('webhookSecret',case when coalesce((payload->>'livemode')::boolean,true) then webhook_secret else test_webhook_secret end,'launch',subscriber_launch,'portalConfiguration',case when coalesce((payload->>'livemode')::boolean,true) then portal_configuration else test_portal_configuration end) into r from app_private.billing_config; return r;
+ elsif op='set_portal' then if coalesce((payload->>'livemode')::boolean,true) then update app_private.billing_config set portal_configuration=payload->>'id';else update app_private.billing_config set test_portal_configuration=payload->>'id';end if;return '{}'::jsonb;
  elsif op='checkout_claim' then
    select * into c from app_private.billing_customers where user_id=(payload->>'userId')::uuid and livemode=(payload->>'livemode')::boolean for update;
    if not found then raise exception 'Customer missing';end if;
@@ -33,7 +33,7 @@ begin
    return jsonb_build_object('id',c.checkout_id,'nonce',c.checkout_nonce,'plan',c.checkout_plan);
  elsif op='checkout_saved' then update app_private.billing_customers set checkout_id=payload->>'id' where user_id=(payload->>'userId')::uuid and livemode=(payload->>'livemode')::boolean and checkout_nonce=(payload->>'nonce')::uuid;return '{}'::jsonb;
  elsif op='checkout_clear' then update app_private.billing_customers set checkout_nonce=null,checkout_id=null where user_id=(payload->>'userId')::uuid and livemode=(payload->>'livemode')::boolean and checkout_nonce=(payload->>'nonce')::uuid;return '{}'::jsonb;
- elsif op='set_hook' then update app_private.billing_config set webhook_secret=payload->>'secret';return '{}'::jsonb;
+ elsif op='set_hook' then if coalesce((payload->>'livemode')::boolean,true) then update app_private.billing_config set webhook_secret=payload->>'secret';else update app_private.billing_config set test_webhook_secret=payload->>'secret';end if;return '{}'::jsonb;
  elsif op='customer' then select jsonb_build_object('id',customer_id) into r from app_private.billing_customers where user_id=(payload->>'userId')::uuid and livemode=(payload->>'livemode')::boolean;return coalesce(r,'{}'::jsonb);
  elsif op='set_customer' then insert into app_private.billing_customers(user_id,customer_id,livemode) values((payload->>'userId')::uuid,payload->>'id',(payload->>'livemode')::boolean) on conflict(user_id,livemode) do nothing;return '{}'::jsonb;
  elsif op='subscription' then
@@ -91,3 +91,4 @@ create trigger enforce_promotion_allowance before insert on public.campaign_subm
 -- Only the publishing receipt columns can be changed by a client.
 revoke update on public.campaign_submissions from authenticated;
 grant update(evidence,evidence_signature) on public.campaign_submissions to authenticated;
+
