@@ -1,7 +1,8 @@
+import {scheduleAndConfirm} from "../../../../lib/schedule-confirmation.mjs";
 import {usage,bridge} from "../../../../lib/billing";
 import {randomUUID} from "node:crypto";
 import {authenticate} from "../../../../lib/server-auth";
-import {APP_ORIGIN,seal,unseal,inspectAccounts,withMetricool,toolData} from "../../../../lib/metricool-oauth.mjs";
+import {APP_ORIGIN,seal,unseal,inspectAccounts,withMetricool} from "../../../../lib/metricool-oauth.mjs";
 import {buildPost,prepareDraft,signResult,verifyResult,safePlannerUrl} from "../../../../lib/scheduling.mjs";
 import {ownedMediaUrl} from "../../../../lib/media.mjs";
 export const dynamic="force-dynamic";
@@ -21,7 +22,8 @@ export async function GET(request) {
   if(error) return reply({message:"Unable to load submissions."},503);
   return reply({submissions:data.map(row=>{
     const valid=row.evidence && verifyResult(row.evidence,row.evidence_signature) && row.evidence.id===row.id && row.evidence.userId===auth.user.id;
-    return {id:row.id,draft_id:row.draft_id,title:row.snapshot.title,platforms:row.snapshot.platforms,date:row.snapshot.planned_at,status:valid ? row.evidence.status : "unknown",message:valid ? row.evidence.message : "Submission outcome is unconfirmed. Check Metricool before trying another post.",plannerUrl:valid ? safePlannerUrl(row.evidence.plannerUrl) : null};
+    const legacy=valid && row.evidence.status==="accepted" && !Array.isArray(row.evidence.confirmedPlatforms);
+    return {id:row.id,draft_id:row.draft_id,title:row.snapshot.title,platforms:row.snapshot.platforms,date:row.snapshot.planned_at,status:valid && !legacy ? row.evidence.status : "unknown",message:legacy ? "This older receipt confirms submission only. Its current platforms and publication time need checking before another copy is created." : valid ? row.evidence.message : "Submission outcome is unconfirmed. Check Metricool before trying another post.",plannerUrl:valid ? safePlannerUrl(row.evidence.plannerUrl) : null};
   })});
 }
 export async function POST(request) {
@@ -65,21 +67,16 @@ export async function POST(request) {
   // Insert the unique attempt BEFORE any provider write. Never retry an uncertain write.
   const {error:claimError}=await auth.client.from("campaign_submissions").insert({id:pending.id,user_id:auth.user.id,draft_id:pending.draftId,snapshot:{title:pending.draft.title,platforms:pending.draft.platforms,planned_at:pending.draft.planned_at,caption:pending.draft.caption,media_url:pending.draft.media_url,brand_id:pending.brandId}});
   if(claimError) return reply({message:claimError.code==="23505" ? "This draft already has a publishing attempt. See Your posts before creating another copy." : claimError.message?.includes("Subscriber publishing") || claimError.message?.includes("allowance") || claimError.message?.includes("paid period") || claimError.message?.includes("queue is full") || claimError.message?.includes("artist profile") ? claimError.message : "Unable to record the submission. No post was sent."},409);
-  let status="unknown",message="The publishing result is awaiting confirmation. Do not create another copy until this attempt has been checked.",plannerUrl=null,providerId=null;
+  let outcome={status:"unknown",message:"The publishing result is awaiting confirmation. Do not create another copy until this attempt has been checked."};
   try {
-    const result=await withMetricool(access,call=>call("createscheduledpost",{blogId:pending.brandId,date:pending.post.publicationDate.dateTime+"Z",info:JSON.stringify(pending.post)}));
-    if(result.isError) {status="rejected";message="The publishing service could not accept the post. Its media, permissions or account limits need attention.";}
-    else {
-      const data=toolData(result),post=data.data || data.post || data;
-      plannerUrl=safePlannerUrl(data.plannerUrl || post.plannerUrl);
-      providerId=post.id ?? post.uuid ?? null;
-      if(providerId || plannerUrl) {status="accepted";message="Your post is queued for the selected time. Publication has not yet been verified.";}
-    }
+    outcome=await withMetricool(access,call=>scheduleAndConfirm(call,pending.brandId,pending.post));
   } catch {} // No retry: timeout may occur after the provider accepted the post.
+  const {status,message,plannerUrl=null}=outcome;
   if(status==="rejected") {try{await bridge("release",{id:pending.id,userId:auth.user.id});}catch{}}
-  const evidence={id:pending.id,userId:auth.user.id,status,message,plannerUrl,providerId};
+  const evidence={...outcome,id:pending.id,userId:auth.user.id};
   const {error:saveError}=await auth.client.from("campaign_submissions").update({evidence,evidence_signature:signResult(evidence)}).eq("id",pending.id).eq("user_id",auth.user.id);
   if(saveError) return reply({message:"Your post was sent, but its result could not be saved. Do not retry until this attempt has been checked.",status:"unknown"},502);
   return reply({status,message,plannerUrl},status==="accepted" ? 200 : 502);
 }
+
 
