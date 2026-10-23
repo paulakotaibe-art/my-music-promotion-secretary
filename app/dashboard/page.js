@@ -121,7 +121,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="container">
+      <main className="container studio-ui">
         <section className="hero dashboard-shell">
           <h1>Loading dashboard...</h1>
         </section>
@@ -130,9 +130,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="container">
+    <main className="container studio-ui">
       <section className="hero dashboard-shell">
-        <h1>Artist Dashboard</h1>
+        <header className="studio-header"><div><span className="studio-eyebrow">MUSIC PROMOTION SECRETARY</span><h1>Your music. Your next move.</h1><p>Create a release, choose your audience, and watch your promotion take shape.</p></div><span className="studio-mark" aria-hidden="true">♫</span></header><div className="studio-workflow"><a href="#campaign-heading">01 · Create your post</a><span>02 · Review your release</span><span>03 · Publish &amp; track</span></div>
 
         <p>Welcome, {user?.email}</p>
 
@@ -196,7 +196,7 @@ export default function DashboardPage() {
             <div
               key={song.id}
               style={{
-                background: "#111827",
+                background: "#f0f4ff",
                 padding: "20px",
                 margin: "15px 0",
                 borderRadius: "10px",
@@ -204,7 +204,7 @@ export default function DashboardPage() {
             >
               <h3>{song.song_title}</h3>
               <p>Artist: {song.artist_name}</p>
-              {/^https?:\/\//i.test(song.song_link || "") && <p><a style={{color: "#fbbf24"}} href={song.song_link} target="_blank" rel="noopener noreferrer">Open song</a></p>}
+              {/^https?:\/\//i.test(song.song_link || "") && <p><a style={{color: "#4338ca"}} href={song.song_link} target="_blank" rel="noopener noreferrer">Open song</a></p>}
               <button type="button" className="button" disabled={saving} onClick={() => editSong(song)}>Edit song</button>
             </div>
           ))
