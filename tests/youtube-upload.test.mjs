@@ -34,3 +34,15 @@ test('receipt checks channel, private visibility, processing, failures and exact
  assert.equal(describeVideo({...v,status:{...v.status,uploadStatus:'rejected'}},'channel',{privacyStatus:'private'}).verified,false);
  assert.equal(describeVideo(v,'channel',{privacyStatus:'private',publishAt:'2026-10-26T12:00:00Z'}).verified,false);
 });
+
+test('dedicated processing details unlock completed uploads without trusting upload acceptance alone',()=>{
+ const v={id:'abcdefghijk',snippet:{channelId:'channel'},status:{privacyStatus:'private',uploadStatus:'uploaded'}};
+ assert.equal(describeVideo(v,'channel',{privacyStatus:'private'}).processed,false);
+ const done=describeVideo({...v,processingDetails:{processingStatus:'succeeded'}},'channel',{privacyStatus:'private'});
+ assert.equal(done.processed,true);assert.equal(done.processingStatus,'succeeded');
+ for(const status of ['processing','terminated','failed']){
+  const r=describeVideo({...v,status:{...v.status,uploadStatus:'processed'},processingDetails:{processingStatus:status}},'channel',{privacyStatus:'private'});
+  assert.equal(r.processed,false);
+ }
+ assert.equal(describeVideo({...v,status:{...v.status,uploadStatus:'rejected'},processingDetails:{processingStatus:'succeeded'}},'channel',{privacyStatus:'private'}).processed,false);
+});
