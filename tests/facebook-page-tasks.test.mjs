@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {exchangeSocial,SOCIAL_SCOPES} from '../lib/social-oauth.mjs';
+const env={FACEBOOK_APP_ID:'fb',FACEBOOK_APP_SECRET:'secret',FACEBOOK_API_VERSION:'v26.0',FACEBOOK_LOGIN_CONFIG_ID:'123456'};
+function response(tasks,token='page-token'){return async u=>({ok:true,json:async()=>u.includes('/oauth/')?{access_token:'fb'}:u.includes('/permissions')?{data:SOCIAL_SCOPES.facebook.map(permission=>({permission,status:'granted'}))}:u.includes('/accounts')?{data:[{id:'page',name:'Music',access_token:token,tasks}]}:{id:'user',name:'Artist'}});}
+test('Facebook accepts legacy and New Pages content creation tasks',async()=>{for(const task of ['CREATE_CONTENT','MANAGE','PROFILE_PLUS_CREATE_CONTENT'])assert.equal((await exchangeSocial('facebook','code',response([task]),env)).pages[0].id,'page');});
+test('Facebook still rejects analytical, advertising, absent tasks and missing Page token',async()=>{for(const tasks of [[],['ANALYZE'],['PROFILE_PLUS_ANALYZE'],['PROFILE_PLUS_ADVERTISE'],undefined])await assert.rejects(exchangeSocial('facebook','code',response(tasks),env),/No Page with content publishing access/);await assert.rejects(exchangeSocial('facebook','code',response(['PROFILE_PLUS_CREATE_CONTENT'],null),env),/No Page with content publishing access/);});
