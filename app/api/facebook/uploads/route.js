@@ -5,6 +5,7 @@ import {signResult,verifyResult} from '../../../../lib/scheduling.mjs';
 import {ownedMediaUrl} from '../../../../lib/media.mjs';
 import {readVideo} from '../../../../lib/youtube-upload.mjs';
 import {requireFacebookOwner,facebookTestMetadata,selectedFacebookPage,facebookCall,uploadFacebookTest,describeFacebookVideo} from '../../../../lib/facebook-upload.mjs';
+import {describeFacebookRelease,facebookReceiptMessage} from '../../../../lib/facebook-release.mjs';
 export const dynamic='force-dynamic';export const maxDuration=60;
 async function owner(request,mutating=false){const auth=await billingAuth(request,mutating);requireFacebookOwner(auth.user);return auth;}
 async function context(auth,signal){
@@ -17,15 +18,27 @@ async function context(auth,signal){
 function trusted(row){const o=row.outcome;return o&&o.id===row.id&&o.userId===row.user_id&&o.pageId===row.page_id&&o.mode==='unpublished'&&verifyResult(o,row.outcome_signature)?o:null;}
 async function save(auth,o){const {data,error}=await auth.client.from('facebook_uploads').update({outcome:o,outcome_signature:signResult(o)}).eq('id',o.id).eq('user_id',auth.user.id).select('id').single();if(error||!data)throw Error('Result could not be saved. Check Business Suite before another copy.');}
 async function inspect(call,id,pageId){if(!/^\d+$/.test(id||''))throw Error('Invalid video identifier.');return describeFacebookVideo(await call('/'+id,{query:{fields:'id,from,status,published'}}),pageId);}
+function trustedRelease(r){const o=r?.outcome;return o&&o.id===r.id&&o.userId===r.user_id&&o.uploadId===r.upload_id&&o.pageId===r.page_id&&o.videoId===r.video_id&&o.mode===r.mode&&(o.publishAt===null?r.publish_at===null:Date.parse(o.publishAt)===Date.parse(r.publish_at))&&verifyResult(o,r.outcome_signature)?o:null;}
+async function releaseStatus(auth,r,ctx){
+ let o=trustedRelease(r),liveVerified=false;
+ if(o&&ctx&&r.page_id===ctx.page.id){try{
+ const current=await ctx.call('/'+r.video_id,{query:{fields:'id,from,status,published,scheduled_publish_time'}});
+ if(current.id!==r.video_id)throw Error();
+ o={...o,...describeFacebookRelease(current,r.page_id,{mode:r.mode,publishAt:r.publish_at}),checkedAt:new Date().toISOString()};
+ const {error}=await auth.client.from('facebook_releases').update({outcome:o,outcome_signature:signResult(o)}).eq('id',r.id).eq('user_id',auth.user.id);if(error)throw error;liveVerified=true;
+ }catch{}}
+ return {id:r.id,mode:r.mode,publishAt:r.publish_at,state:o?.state||'unconfirmed',verified:!!o?.verified,liveVerified,message:facebookReceiptMessage(o||{},liveVerified)};
+}
 export async function GET(request){
  let auth;try{auth=await owner(request);}catch{return json({message:'Sign in as the app owner to use the Facebook pilot.'},403);}
  try{
- const [{data:rows,error},{data:drafts,error:de}]=await Promise.all([auth.client.from('facebook_uploads').select('*').eq('user_id',auth.user.id).order('created_at',{ascending:false}).limit(10),auth.client.from('campaign_drafts').select('id,title,media_url,media_kind').eq('user_id',auth.user.id).order('created_at',{ascending:false}).limit(50)]);if(error||de)throw Error();
+ const [{data:rows,error},{data:drafts,error:de},{data:releases,error:re}]=await Promise.all([auth.client.from('facebook_uploads').select('*').eq('user_id',auth.user.id).order('created_at',{ascending:false}).limit(10),auth.client.from('campaign_drafts').select('id,title,media_url,media_kind').eq('user_id',auth.user.id).order('created_at',{ascending:false}).limit(50),auth.client.from('facebook_releases').select('*').eq('user_id',auth.user.id)]);if(error||de||re)throw Error();
  let ctx,connectionError='';try{ctx=await context(auth,AbortSignal.timeout(15000));}catch(e){connectionError=e.message;}
  const uploads=[];
  for(const row of rows||[]){let o=trusted(row),liveVerified=false;if(o?.videoId&&ctx&&row.page_id===ctx.page.id){try{o={...o,...await inspect(ctx.call,o.videoId,row.page_id),checkedAt:new Date().toISOString()};await save(auth,o);liveVerified=true;}catch{}}
- uploads.push({id:row.id,createdAt:row.created_at,title:row.title,liveVerified,...(o?{videoId:o.videoId,url:o.url,verified:o.verified,processed:o.processed,failed:o.failed,published:o.published,processingStatus:o.processingStatus}:{}),message:o?.message||'Submission outcome unconfirmed. Check Meta Business Suite before another copy.'});}
- return json({page:ctx?{id:ctx.page.id,name:ctx.page.name}:null,connectionError,publicPublishingEnabled:false,uploads,drafts:(drafts||[]).filter(d=>d.media_kind!=='audio'&&ownedMediaUrl(d.media_url,auth.user.id)&&/\.mp4$/i.test(d.media_url)).map(d=>({id:d.id,title:d.title}))});
+ const r=(releases||[]).find(r=>r.upload_id===row.id),release=r?await releaseStatus(auth,r,ctx):null;
+ uploads.push({id:row.id,createdAt:row.created_at,title:row.title,liveVerified,release,canRelease:!!(liveVerified&&o?.verified&&o?.processed&&!release),...(o?{videoId:o.videoId,url:o.url,verified:o.verified,processed:o.processed,failed:o.failed,published:o.published,processingStatus:o.processingStatus}:{}),message:facebookReceiptMessage(o||{},liveVerified)});}
+ return json({page:ctx?{id:ctx.page.id,name:ctx.page.name}:null,connectionError,publicPublishingEnabled:true,uploads,drafts:(drafts||[]).filter(d=>d.media_kind!=='audio'&&ownedMediaUrl(d.media_url,auth.user.id)&&/\.mp4$/i.test(d.media_url)).map(d=>({id:d.id,title:d.title}))});
  }catch{return json({message:'Facebook test records could not be loaded.'},503);}
 }
 export async function POST(request){
