@@ -25,7 +25,8 @@ export async function POST(request){
  if(reserve){outcome=null;return json({message:reserve.code==='23505'?'This video already has a release attempt. Refresh status and check Meta Business Suite.':'No publication was requested. Unable to save the release reservation.'},409);}
  await save(auth,outcome);
  await releaseFacebookOnce(call,signed.videoId,release);
+ outcome={...outcome,requestAcknowledged:true};await save(auth,outcome);
  try{const current=await call('/'+signed.videoId,{query:{fields:'id,from,status,published,scheduled_publish_time'}});outcome={...outcome,...describeFacebookRelease(current,page.id,release),checkedAt:new Date().toISOString()};await save(auth,outcome);}catch{}
  return json({message:outcome.verified?facebookReceiptMessage(outcome):'Release request sent. Refresh status to verify the result. Do not repeat the request.'});
- }catch(e){if(outcome){try{await save(auth,outcome);}catch{}return json({message:'Release outcome is unconfirmed. Refresh status and check Meta Business Suite before another attempt.'},502);}return json({message:e instanceof SyntaxError?'Invalid request.':e.message||'Unable to prepare the release.'},400);}
+ }catch(e){if(outcome){if(Number.isInteger(e?.providerCode))outcome={...outcome,providerErrorCode:e.providerCode};try{await save(auth,outcome);}catch{}return json({message:'Release outcome is unconfirmed. Refresh status and check Meta Business Suite before another attempt.'},502);}return json({message:e instanceof SyntaxError?'Invalid request.':e.message||'Unable to prepare the release.'},400);}
 }
