@@ -37,3 +37,9 @@ test('receipt messages reflect completed status and distinguish stale checks',()
  assert.match(facebookReceiptMessage({state:'published',verified:true}),/processed and published/);
  assert.match(facebookReceiptMessage({state:'published',verified:true},false),/could not be checked/);
 });
+test('schedule diagnostics distinguish missing, changed and matching provider times',()=>{
+ const expected={mode:'scheduled',publishAt:'2026-10-25T12:00:00.000Z'};
+ const missing=describeFacebookRelease(video,'99',expected,now);assert.equal(missing.observedPublishAt,null);assert.equal(missing.scheduleCheck,'missing');assert.match(facebookReceiptMessage(missing),/returned no scheduled time/);
+ const changed=describeFacebookRelease({...video,scheduled_publish_time:Date.parse(expected.publishAt)/1000+60},'99',expected,now);assert.equal(changed.scheduleCheck,'different');assert.match(facebookReceiptMessage(changed),/different scheduled time/);
+ const matching=describeFacebookRelease({...video,scheduled_publish_time:expected.publishAt},'99',expected,now);assert.equal(matching.scheduleCheck,'matches');assert.equal(matching.observedPublishAt,expected.publishAt);
+});

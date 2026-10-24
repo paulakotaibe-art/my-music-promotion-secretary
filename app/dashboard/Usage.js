@@ -27,6 +27,6 @@ export default function Usage({at,refreshKey}){
  {busy&&<p role="status">Checking with Stripe…</p>}{error&&<p role="alert">{error}</p>}{billingNotice&&<p role="status">{billingNotice}</p>}
  {subscriptions&&<><h4>Your subscriptions</h4>{subscriptions.length===0&&<p>No subscriptions found.</p>}{subscriptions.map(s=><div key={s.id}><p><strong>{s.name}</strong> · {s.test?'Test mode · ':''}{s.status}</p><p>{s.cancelAtPeriodEnd?'Renewal cancelled. Current period ends: ':'Current period ends: '}{new Date(s.endsAt).toLocaleString('en-GB',{timeZone:'Europe/London'})} (London time)</p>{!s.cancelAtPeriodEnd&&['active','trialing','past_due'].includes(s.status)&&(confirmId===s.id?<div><p>Cancel renewal? Access will remain until the current period ends. {data?.owner?'Your owner access is separate.':''}</p><button type="button" disabled={busy} onClick={()=>cancelRenewal(s.id)}>Yes, cancel renewal</button> <button type="button" disabled={busy} onClick={()=>setConfirmId(null)}>Keep subscription</button></div>:<button type="button" disabled={busy} onClick={()=>setConfirmId(s.id)}>Cancel renewal</button>)}</div>)}</>}
  </section>
- <small>One promotion can go to YouTube, Facebook and TikTok together. Drafts do not use your allowance. Unconfirmed submissions stay reserved until checked.</small></aside>;
+ <p><a href="/publishing-status">Check your channels and publishing access →</a></p><small>Drafts do not use your allowance. Unconfirmed submissions stay reserved until checked. Platform availability is shown on your publishing status page.</small></aside>;
 }
 
