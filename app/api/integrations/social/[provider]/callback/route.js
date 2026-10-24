@@ -16,7 +16,7 @@ export async function GET(request,{params}){
  }catch(e){
  const known={'Required Page permissions missing':'permissions','No Page with content publishing access':'page_access','Unable to list all Pages':'page_list'};
  reason=known[e?.message]||stage;
- console.warn('social_connection_failed',{provider,stage,reason,httpStatus:Number.isInteger(e?.httpStatus)?e.httpStatus:undefined,providerCode:Number.isInteger(e?.providerCode)?e.providerCode:undefined});
+ console.warn('social_connection_failed',{provider,stage,reason,httpStatus:Number.isInteger(e?.httpStatus)?e.httpStatus:undefined,providerCode:Number.isInteger(e?.providerCode)?e.providerCode:undefined,pageDiagnostics:e?.pageDiagnostics?Object.fromEntries(['returned','withToken','withContentTask','withoutTasks'].filter(k=>Number.isInteger(e.pageDiagnostics[k])).map(k=>[k,e.pageDiagnostics[k]])):undefined});
  }
  const r=NextResponse.redirect(APP_ORIGIN+'/social-connections?platform='+provider+'&result='+outcome+(outcome==='failed'?'&reason='+reason:''),303);
  r.headers.set('Cache-Control','private, no-store');r.headers.set('Referrer-Policy','no-referrer');r.cookies.set('__Host-music-'+provider,'',{...cookieOptions,maxAge:0});return r;
