@@ -1,0 +1,3 @@
+export default function PolicyPage({title,children}){
+ return <main className="container studio-ui"><article className="hero dashboard-shell" style={{maxWidth:900,margin:"0 auto",lineHeight:1.7}}><header className="studio-header"><div><span className="studio-eyebrow">MY MUSIC PROMOTION SECRETARY</span><h1>{title}</h1><p>Operator: Paul Ifeanyi Akotaibe · Updated 25 October 2026</p></div></header>{children}<hr/><p>Support and privacy: <a href="mailto:hello@drpaulslibrary.com">hello@drpaulslibrary.com</a></p><nav aria-label="Policy pages" style={{display:"flex",gap:18,flexWrap:"wrap"}}><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/data-deletion">Data deletion</a><a href="/support">Support</a><a href="/">Home</a></nav></article></main>;
+}
