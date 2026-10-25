@@ -19,6 +19,14 @@ export async function POST(request){
  const call=facebookCall(page,process.env,fetch,AbortSignal.timeout(35000));
  const video=await call('/'+signed.videoId,{query:{fields:'id,from,status,published,scheduled_publish_time'}});
  assertFacebookReleaseReady(video,page.id,signed.videoId);
+ if(release.mode==='scheduled'){
+  const {data:old,error:oe}=await auth.client.from('facebook_releases').select('id,mode,strategy,dispatch_state').eq('upload_id',row.id).eq('user_id',auth.user.id).maybeSingle();if(oe)throw Error('Unable to check the previous release.');
+  if(old&&(old.mode!=='scheduled'||(old.strategy==='app'&&old.dispatch_state!=='queued')))throw Error('This release needs a manual status check before rescheduling.');
+  const id=old?.id||randomUUID(),queued={id,userId:auth.user.id,uploadId:row.id,pageId:page.id,videoId:signed.videoId,mode:'scheduled',publishAt:release.publishAt,appManaged:true,state:'queued',verified:false};
+  const {error:qe}=await auth.client.rpc('queue_facebook_release',{p_id:id,p_upload:row.id,p_time:release.publishAt,p_outcome:queued,p_signature:signResult(queued)});
+  if(qe)throw Error('Schedule could not be saved. Refresh status before another attempt.');
+  return json({message:'Saved in the app schedule. The server will request publication when due, normally within one minute. Final Facebook publication will be checked separately.'});
+ }
  // Reserve before writing to Meta. An uncertain response never releases this guard.
  const id=randomUUID();outcome={id,userId:auth.user.id,uploadId:row.id,pageId:page.id,videoId:signed.videoId,mode:release.mode,publishAt:release.publishAt,verified:false,state:'unconfirmed'};
  const {error:reserve}=await auth.client.from('facebook_releases').insert({id,user_id:auth.user.id,upload_id:row.id,page_id:page.id,video_id:signed.videoId,mode:release.mode,publish_at:release.publishAt});
