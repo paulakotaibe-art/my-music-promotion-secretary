@@ -110,3 +110,6 @@ p {
 .channel-steps{padding-left:22px;line-height:1.65;margin:18px 0}
 .channel-steps li{padding:5px 0;overflow-wrap:anywhere}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.tiktok-studio .studio-header{background:linear-gradient(125deg,rgba(20,184,166,.18),rgba(244,63,94,.15));border-radius:20px;padding:clamp(16px,3vw,30px)}
+.tiktok-fields{border:0;padding:0;margin:0;min-width:0}.tiktok-fields legend{font-weight:700;margin:18px 0}.tiktok-preview{display:block;max-width:100%;width:440px;max-height:450px;background:#111;border-radius:16px;margin:20px auto}.tiktok-checks{display:grid;gap:12px}.tiktok-disabled{opacity:.55}.tiktok-disclosure{padding:16px;border:1px solid #ad7a42;border-radius:14px;background:rgba(245,158,11,.08)}.tiktok-caption{white-space:pre-wrap;overflow-wrap:anywhere}.tiktok-studio .upload-receipt button,.tiktok-studio .publish-review button{margin:8px 10px 0 0}.tiktok-studio fieldset:disabled{opacity:.7}

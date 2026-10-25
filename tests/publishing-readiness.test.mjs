@@ -23,3 +23,12 @@ test('Facebook studio opens only with an explicit server rollout grant and the c
  assert.equal(get({connected:true,pageSelected:false,publishingEnabled:true}).ready,false);
  assert.equal(get({connected:true,pageSelected:true}).ready,false);
 });
+
+test('TikTok never treats ownership or a saved connection as a publishing grant',()=>{
+ const get=(owner,c)=>publishingReadiness({owner,canPublish:true},{tiktok:c}).channels.find(x=>x.provider==='tiktok');
+ assert.equal(get(true,{connected:true}).ready,false);
+ assert.equal(get(false,{connected:true}).ready,false);
+ assert.equal(get(false,{connected:true,publishingEnabled:true}).ready,true);
+ assert.equal(get(true,{connected:false,publishingEnabled:true}).ready,false);
+ assert.equal(get(false,{}).studio,'/tiktok');
+});
