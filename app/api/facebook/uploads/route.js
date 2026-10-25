@@ -25,9 +25,10 @@ async function releaseStatus(auth,r,ctx){
  const current=await ctx.call('/'+r.video_id,{query:{fields:'id,from,status,published,scheduled_publish_time'}});
  if(current.id!==r.video_id)throw Error();
  o={...o,...describeFacebookRelease(current,r.page_id,{mode:r.mode,publishAt:r.publish_at}),checkedAt:new Date().toISOString()};
+ if(r.strategy==='app'&&current.published!==true){o={...o,appManaged:true,verified:false,state:r.dispatch_state==='queued'?'queued':r.dispatch_state==='claimed'?'publishing':r.dispatch_state==='missed'?'missed':'unconfirmed'};}
  const {error}=await auth.client.from('facebook_releases').update({outcome:o,outcome_signature:signResult(o)}).eq('id',r.id).eq('user_id',auth.user.id);if(error)throw error;liveVerified=true;
  }catch{}}
- return {id:r.id,mode:r.mode,publishAt:r.publish_at,state:o?.state||'unconfirmed',verified:!!o?.verified,liveVerified,message:facebookReceiptMessage(o||{},liveVerified)};
+ return {id:r.id,mode:r.mode,publishAt:r.publish_at,state:o?.state||'unconfirmed',verified:!!o?.verified,liveVerified,canReschedule:!!(liveVerified&&r.mode==='scheduled'&&o?.published===false&&o?.processed&&o?.scheduleCheck==='missing'&&((r.strategy==='meta')||(r.strategy==='app'&&r.dispatch_state==='queued'&&Date.parse(r.publish_at)>Date.now()))),message:facebookReceiptMessage(o||{},liveVerified)};
 }
 export async function GET(request){
  let auth;try{auth=await owner(request);}catch{return json({message:'Sign in as the app owner to use the Facebook pilot.'},403);}
@@ -37,7 +38,7 @@ export async function GET(request){
  const uploads=[];
  for(const row of rows||[]){let o=trusted(row),liveVerified=false;if(o?.videoId&&ctx&&row.page_id===ctx.page.id){try{o={...o,...await inspect(ctx.call,o.videoId,row.page_id),checkedAt:new Date().toISOString()};await save(auth,o);liveVerified=true;}catch{}}
  const r=(releases||[]).find(r=>r.upload_id===row.id),release=r?await releaseStatus(auth,r,ctx):null;
- uploads.push({id:row.id,createdAt:row.created_at,title:row.title,liveVerified,release,canRelease:!!(liveVerified&&o?.verified&&o?.processed&&!release),...(o?{videoId:o.videoId,url:o.url,verified:o.verified,processed:o.processed,failed:o.failed,published:o.published,processingStatus:o.processingStatus}:{}),message:facebookReceiptMessage(o||{},liveVerified)});}
+ uploads.push({id:row.id,createdAt:row.created_at,title:row.title,liveVerified,release,canSchedule:!!release?.canReschedule,canRelease:!!(liveVerified&&o?.verified&&o?.processed&&!release),...(o?{videoId:o.videoId,url:o.url,verified:o.verified,processed:o.processed,failed:o.failed,published:o.published,processingStatus:o.processingStatus}:{}),message:facebookReceiptMessage(o||{},liveVerified)});}
  return json({page:ctx?{id:ctx.page.id,name:ctx.page.name}:null,connectionError,publicPublishingEnabled:true,uploads,drafts:(drafts||[]).filter(d=>d.media_kind!=='audio'&&ownedMediaUrl(d.media_url,auth.user.id)&&/\.mp4$/i.test(d.media_url)).map(d=>({id:d.id,title:d.title}))});
  }catch{return json({message:'Facebook test records could not be loaded.'},503);}
 }
