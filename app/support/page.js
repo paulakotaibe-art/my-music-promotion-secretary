@@ -1,0 +1,7 @@
+import PolicyPage from '../components/PolicyPage';
+export const metadata={title:'Support | Music Promotion Secretary',description:'Contact support for publishing, billing and privacy requests.'};
+export default function Support(){return <PolicyPage title="How can we help?">
+<p>Email <a href="mailto:hello@drpaulslibrary.com">hello@drpaulslibrary.com</a> and include “Music Promotion Secretary” in the subject. The app is operated by Paul Ifeanyi Akotaibe.</p>
+<div className="upload-grid"><section className="upload-panel"><h2>Publishing help</h2><p>Include the status message, release time and timezone, affected Page/channel and post link. Avoid another upload or Publish attempt when the result is uncertain.</p><a href="/help">Read the publishing guide</a></section><section className="upload-panel"><h2>Account and billing</h2><p>Use your registered email. Manage subscription in your dashboard shows existing subscriptions and renewal cancellation. No payment or posting is activated merely by contacting support.</p><a href="/dashboard">Open dashboard</a></section><section className="upload-panel"><h2>Privacy and deletion</h2><p>Tell us what information or connection your request concerns. Requests are reviewed manually; no instant-deletion feature is implied.</p><a href="/data-deletion">Deletion instructions</a></section></div>
+<p><strong>Do not email passwords, secure sign-in links, API keys, platform tokens or payment-card details.</strong></p>
+</PolicyPage>;}
