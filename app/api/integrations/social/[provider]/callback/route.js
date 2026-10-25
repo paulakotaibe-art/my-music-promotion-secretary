@@ -2,7 +2,7 @@ import {NextResponse} from 'next/server';
 import {cookies} from 'next/headers';
 import {authenticate} from '../../../../../../lib/server-auth';
 import {APP_ORIGIN,seal,unseal,cookieOptions} from '../../../../../../lib/metricool-oauth.mjs';
-import {checkSocialState,exchangeSocial,SOCIAL_SCOPES} from '../../../../../../lib/social-oauth.mjs';
+import {checkSocialState,exchangeSocial,retainFacebookPage,SOCIAL_SCOPES} from '../../../../../../lib/social-oauth.mjs';
 export const dynamic='force-dynamic';export const maxDuration=60;
 export async function GET(request,{params}){
  const provider=params.provider;if(!Object.hasOwn(SOCIAL_SCOPES,provider))return new Response('Unknown platform',{status:404});
@@ -11,7 +11,13 @@ export async function GET(request,{params}){
  const saved=unseal(cookies().get('__Host-music-'+provider)?.value||'');checkSocialState(saved,url.searchParams.get('state'),provider);
  stage='consent';const code=url.searchParams.get('code');if(url.searchParams.has('error')||!code||code.length>4096)throw Error();
  stage='signin';const auth=await authenticate(saved.accessToken);checkSocialState(saved,url.searchParams.get('state'),provider,auth.user);
- stage='provider';const c=await exchangeSocial(provider,code);
+ stage='provider';let c=await exchangeSocial(provider,code);
+ stage='storage';
+ if(provider==='facebook'){
+ const {data:previous,error:readError}=await auth.client.from('social_connections').select('encrypted_connection').eq('user_id',auth.user.id).eq('provider',provider).maybeSingle();
+ if(readError)throw readError;
+ c=retainFacebookPage(c,previous?unseal(previous.encrypted_connection):null);
+ }
  stage='storage';const {error}=await auth.client.from('social_connections').upsert({user_id:auth.user.id,provider,account_id:c.accountId,account_name:c.accountName,encrypted_connection:seal(c),connected_at:new Date().toISOString()},{onConflict:'user_id,provider'});if(error)throw error;outcome='connected';
  }catch(e){
  const known={'Required Page permissions missing':'permissions','No Page with content publishing access':'page_access','Unable to list all Pages':'page_list'};
