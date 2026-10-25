@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import Campaigns from "./Campaigns";
+import {ENROLMENT_INTENT_KEY,readEnrolmentIntent} from "../../lib/enrolment.mjs";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const protectDashboard = async () => {
+      if(new URLSearchParams(window.location.hash.slice(1)).has('error')){router.replace('/login?notice=link');return;}
       if (!supabase) {
         router.push("/login");
         return;
@@ -52,6 +54,11 @@ export default function DashboardPage() {
         return;
       }
 
+      try {
+        const next=readEnrolmentIntent(localStorage.getItem(ENROLMENT_INTENT_KEY));
+        localStorage.removeItem(ENROLMENT_INTENT_KEY);
+        if(next&&next!=='/dashboard'){router.replace(next);return;}
+      } catch {}
       setUser(user);
       try {
         await fetchSongs(user.id);
@@ -134,7 +141,7 @@ export default function DashboardPage() {
       <section className="hero dashboard-shell">
         <header className="studio-header"><div><span className="studio-eyebrow">MUSIC PROMOTION SECRETARY</span><h1>Your music. Your next move.</h1><p>Create a release, choose your audience, and watch your promotion take shape.</p></div><a className="studio-nav" href="/help">Help &amp; publishing guide →</a></header><div className="studio-workflow"><a href="#campaign-heading">01 · Create your post</a><span>02 · Review your release</span><span>03 · Publish &amp; track</span></div>
 
-        <p>Welcome, {user?.email}</p><p><a className="button" href="/connections">Connect your YouTube channel</a></p>
+        <p>Welcome, {user?.email}</p><p><a href="/get-started">Artist setup guide</a> · <a href="/publishing-status">Publishing access</a> · <a href="/facebook">Facebook studio</a></p><p><a className="button" href="/connections">Connect your YouTube channel</a></p>
 
         <button onClick={handleLogout} className="button">
           Logout

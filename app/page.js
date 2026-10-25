@@ -10,12 +10,11 @@ export default function Home() {
           marketing.
         </p>
 
-        <a className="button" href="/login">
-          Artist Login
+        <a className="button" href="/join">
+          Register as an artist
         </a>
 
-        <br />
-        <br />
+        <p><a href="/login">Already registered? Sign in</a> · <a href="/pricing">View plans</a></p>
 
         <a className="button" href="/dashboard">
           Go to Dashboard

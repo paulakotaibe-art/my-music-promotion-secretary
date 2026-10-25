@@ -22,3 +22,11 @@ test('uncertain external write is not retried and records the uncertain stage',a
 test('wrong Page, native schedule and unfinished processing all block publication',async()=>{
  for(const changed of [{from:{id:'88'}},{scheduled_publish_time:at/1000+3600},{status:{video_status:'processing'}}]){let writes=0;await assert.rejects(dispatchFacebookVideo(async(path,options)=>{if(options.body)writes++;return {...v,...changed};},row,at));assert.equal(writes,0);}
 });
+
+test('subscriber dispatch needs both a signed subscriber receipt and a database authorization grant',()=>{
+ const customer={...row,user_id:'customer',outcome:{...row.outcome,userId:'customer',subscriber:true}};
+ assert.equal(validDispatchReceipt(customer,()=>true),false);
+ assert.equal(validDispatchReceipt(customer,()=>true,true),true);
+ assert.equal(validDispatchReceipt(customer,()=>false,true),false);
+ assert.equal(validDispatchReceipt({...customer,outcome:{...customer.outcome,subscriber:false}},()=>true,true),false);
+});

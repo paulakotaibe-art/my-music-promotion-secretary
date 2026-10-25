@@ -14,7 +14,8 @@ export async function POST(request){
  for(const job of jobs){
   const r=job.release;let o={id:r.id,userId:r.user_id,uploadId:r.upload_id,pageId:r.page_id,videoId:r.video_id,mode:'scheduled',publishAt:r.publish_at,appManaged:true,state:'unconfirmed',verified:false};
   try{
-   if(!validDispatchReceipt(r,verifyResult))throw Error('Schedule receipt could not be verified.');
+   if(job.subscriberAuthorized===false)throw Error('Publishing access is no longer active.');
+   if(!validDispatchReceipt(r,verifyResult,job.subscriberAuthorized))throw Error('Schedule receipt could not be verified.');
    const saved=unseal(job.connection),page=selectedFacebookPage({...saved,selectedPage:{id:r.page_id}}),call=facebookCall(page,process.env,fetch,signal);
    o={...o,...await dispatchFacebookVideo(call,r),checkedAt:new Date().toISOString()};
   }catch(e){o={...o,writeAttempted:e.writeAttempted===true,requestAcknowledged:e.requestAcknowledged===true,checkedAt:new Date().toISOString(),...(Number.isInteger(e.providerCode)?{providerErrorCode:e.providerCode}:{})};}
