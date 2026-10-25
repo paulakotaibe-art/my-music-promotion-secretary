@@ -54,9 +54,9 @@ Save `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET` in Vercel Production as appr
 - Status polling ends after 24 hours unless the owner/customer requests another read-only check. This never uploads another video.
 
 ## Validation during implementation
-90 Node tests passed, including TikTok privacy/disclosures, server media tickets and MP4 duration, token refresh identity/scope/rotation, exact signed review binding, no duplicate initialization, status-only recovery and honest publication status. Next.js production build passed. Local HTTP checks returned 200 for `/tiktok`, 401 for unauthenticated creator/posts/prepare operations, and 403 for invalid media tickets and dispatch nonces.
+91 Node tests passed, including TikTok privacy/disclosures, server media tickets and MP4 duration, token refresh identity/scope/rotation, exact signed review binding, no duplicate initialization, status-only recovery and honest publication status. Next.js production build passed. Local HTTP checks returned 200 for `/tiktok`, 401 for unauthenticated creator/posts/prepare operations, and 403 for invalid media tickets and dispatch nonces.
 
-Database migration applied with TikTok flags false. Rollback-only checks passed in smaller groups: shared trial cap, rescheduling without an extra charge, cancellation refunds, once-only claim/completion, cross-user RLS and cancellation denial, refresh locking/capability replay denial, and read-only worker status recovery with a one-use nonce. Isolated expired-trial dispatch and owner account-rebinding/quota-exemption checks passed. No test users or TikTok posts remain. Large combined tool calls sometimes expired without a usable result; no pass is inferred from those calls.
+Database migration applied with TikTok flags false. Rollback-only checks passed in smaller groups: shared trial cap, rescheduling without an extra charge, cancellation refunds, once-only claim/completion, cross-user RLS and cancellation denial, refresh locking/capability replay denial, and read-only worker status recovery with a one-use nonce. Isolated expired-trial dispatch, owner account-rebinding/quota-exemption and refresh-versus-reconnect race checks passed. No test users or TikTok posts remain. Large combined tool calls sometimes expired without a usable result; no pass is inferred from those calls.
 
 Security advisor review introduced no new warning categories. Four new private tables intentionally deny client access and produce RLS-without-policy informational notices. Existing warnings about pg_net's schema, the unrelated rls_auto_enable function and leaked-password protection remain separate launch follow-up items.
 
@@ -67,3 +67,6 @@ https://developers.tiktok.com/docs/en/content-posting-api-reference-direct-post
 https://developers.tiktok.com/docs/en/content-posting-api-reference-get-video-status
 https://developers.tiktok.com/docs/en/content-posting-api-media-transfer-guide
 https://developers.tiktok.com/docs/en/oauth-user-access-token-management
+
+## Database installation order
+For a new environment, apply `database/tiktok-publishing.sql`, then `database/tiktok-owner-schedule-account.sql`, then `database/tiktok-refresh-reconnect.sql`. All three are already installed in the connected project with rollout disabled. The reconnect patch uses a ciphertext hash to prevent a stale refresh from replacing a newer OAuth connection.
