@@ -101,3 +101,12 @@ p {
 @keyframes studio-enter{from{opacity:.5;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:700px){.studio-ui{padding:14px}.studio-ui .hero{padding:22px 16px;border-radius:20px}.studio-header{align-items:flex-start;flex-direction:column;gap:8px}.studio-mark{display:none}.studio-workflow{gap:6px}.studio-workflow>*{padding:12px 8px;font-size:11px}.studio-form{grid-template-columns:1fr;padding:18px;gap:0}.studio-ui .campaigns fieldset{padding:15px}.activity-panel{padding:20px}.activity-panel strong{font-size:21px}.studio-ui .network-choice{margin:6px 6px 6px 0;padding:10px}.studio-nav{white-space:normal}}
 @media(prefers-reduced-motion:reduce){.studio-ui *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Channel setup remains readable on narrow dashboards and without colour cues. */
+.studio-ui .channel-status{border-style:solid;border-top:5px solid #d6a13e}
+.studio-ui .channel-ready{border-top-color:#238463}
+.channel-badge{display:inline-block;padding:6px 11px;border-radius:20px;background:#fff1d4;color:#77510a;font-size:13px;font-weight:700}
+.channel-ready .channel-badge{background:#dff4e9;color:#176344}
+.channel-steps{padding-left:22px;line-height:1.65;margin:18px 0}
+.channel-steps li{padding:5px 0;overflow-wrap:anywhere}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
