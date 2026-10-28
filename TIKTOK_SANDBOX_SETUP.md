@@ -3,7 +3,8 @@
 ## Status
 
 This branch prepares configuration isolation. A separate database has now been provisioned as recorded below.
-No hosted Sandbox deployment, OAuth connection, TikTok video submission, demo recording or app approval exists.
+A hosted isolated Sandbox deployment is now live. No OAuth connection, TikTok video submission,
+demo recording or app approval exists.
 Production credentials, database settings and rollout flags have not been changed.
 
 The existing production website origin remains the default. Vercel Preview builds must explicitly
@@ -11,7 +12,7 @@ use Sandbox mode. Sandbox builds and API imports reject the known production dat
 website, inherited production TikTok keys, unrelated platform credentials and live billing mode.
 The Sandbox page displays a testing banner. Its own database must contain only test accounts/data.
 
-## Provisioned database and current hosting blocker
+## Provisioned database and verified hosting
 
 The owner authorized the existing MUSIC PROMOTION SECRETARY organization on 28 October 2026.
 Supabase project `slvhnpagtsprmivaujav` (Music Promotion Secretary TikTok Sandbox) is ACTIVE_HEALTHY
@@ -24,14 +25,34 @@ rollback-only account isolation checks reject cross-account access; all users, o
 and posts remain empty. TikTok enabled/audited/url_verified and subscriber launch are all false.
 The security advisor returned only informational notices for deliberately policy-free private tables.
 No dispatch cron or production HTTP wakeup function was installed. Scheduled dispatch remains unconfigured.
-No auth user or owner grant has been created; test authentication and email redirect configuration remain pending.
+No auth user or owner grant has been created. The exact test email redirect configuration is now saved;
+a real test owner's email-link sign-in remains pending.
 
-Vercel's existing project has deployment protection. A separate project named
-`music-promotion-secretary-tiktok-sandbox` was attempted in the same existing team, but the connector returned
-HTTP 403: “You don't have permission to create the project.” No CLI credential fallback is available.
-The user must create that test project in the same team through their Vercel dashboard before the agent
-can install its test-only environment settings. Do not modify existing project protection or production variables.
-Sandbox TikTok keys remain unknown and must be entered securely into the test project's settings.
+The separate Vercel project `music-promotion-secretary-tiktok-sandbox` is deployed from
+`prepare/tiktok-sandbox-isolation`, commit `ff5939157962c671b697b9be97f57a43e014f856`.
+Deployment `dpl_F8tbphdxc62nTF69NnBvcvGBeDEM` completed Ready in 42 seconds.
+Stable website: https://music-promotion-secretary-tiktok-sa.vercel.app .
+The Sandbox origin variable was corrected to this exact origin, without a trailing slash.
+All eight required environment variable names are present in this separate project's Production environment.
+Credential values were not revealed; their live validity has not yet been tested.
+
+Verified over unauthenticated HTTPS: root, /tiktok, /terms and /privacy return 200 and the
+testing-only banner. /api/tiktok/creator and /api/tiktok/posts return 401 without a session.
+Billing status returns 503 with configured=false, testMode=true and paidLaunchOpen=false,
+consistent with the closed billing configuration.
+
+Supabase dashboard access was verified through GitHub account `paulakotaibe-art`.
+Its Site URL is now the exact stable Sandbox origin. The only additional Auth redirect URL is
+https://music-promotion-secretary-tiktok-sa.vercel.app/dashboard, matching the app's email-link flow.
+No wildcard redirect was added. Users, owner grants, social connections and TikTok posts remain empty.
+A fresh security advisor check returned only the same informational notices for deliberately closed
+private tables. Enabled, audited and url_verified remain false.
+
+Remaining blockers: establish an authorized test owner's app sign-in, verify that account's identity
+before granting owner access, authenticate the TikTok developer portal, configure the exact Sandbox
+website/callback and URL property, then verify OAuth. TikTok's cloud portal currently requires developer
+email/password sign-in. No credentials were requested while the owner was away.
+No video has been published or review submitted, and no production settings were changed.
 
 ## Required isolated configuration
 
