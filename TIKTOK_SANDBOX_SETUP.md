@@ -1,114 +1,35 @@
-# TikTok Sandbox preparation — 28 October 2026
+# TikTok Sandbox status — 28 October 2026
 
-## Status
+## Verified private pilot
+- Isolated website: https://music-promotion-secretary-tiktok-sa.vercel.app
+- Vercel project: music-promotion-secretary-tiktok-sandbox; branch prepare/tiktok-sandbox-isolation.
+- Supabase project: slvhnpagtsprmivaujav, eu-central-2.
+- Owner email sign-in verified and owner access enabled in the test database.
+- TikTok Sandbox OAuth connected Dr Paul (@dr.paul5245).
+- Sandbox callback and URL ownership property verified.
+- TikTok enabled=true, url_verified=true, audited=false. Subscriber launch remains closed.
+- Owner explicitly reviewed and submitted “A Beautiful Life — Private Test” with Only me visibility, interactions off and AI disclosure on.
+- Owner confirmed playback in TikTok's private posts.
+- Database result: state=nonpublic, providerStatus=PUBLISH_COMPLETE.
+- Synchronous existing-result check deployed in commit 68aceda79e90a97cae8cd151a7f0c08563e01e8b; Vercel deployment 48pzN9DT48V9hxGnWyoq4UHYUHH1 Ready.
+- 98 tests and Sandbox fixture build passed before that deployment.
+- Production database, credentials and website remain unchanged.
 
-This branch prepares configuration isolation. A separate database has now been provisioned as recorded below.
-A hosted isolated Sandbox deployment is now live. No OAuth connection, TikTok video submission,
-demo recording or app approval exists.
-Production credentials, database settings and rollout flags have not been changed.
+## Scheduled worker: installation blocked
+The owner authorized completing the Sandbox worker. pg_cron and pg_net were enabled in the isolated database.
+The prepared database/tiktok-sandbox-worker.sql calls only the Sandbox /api/tiktok/dispatch endpoint using short-lived single-use nonces.
+Two installation requests returned Invalid or expired requestState. A subsequent read confirmed wake_tiktok_dispatch() does not exist.
+Do not describe scheduling as operational. No scheduled test was submitted; pending post count was zero.
+Browser session became unavailable and its replacement inventory has no open tabs.
+Resume by installing the reviewed worker in the test database, verifying the cron job, then testing an empty dispatch and checking its response before any owner-authorized scheduled post.
+Do not install the original tiktok-publishing.sql wakeup section: it points at the production website.
 
-The existing production website origin remains the default. Vercel Preview builds must explicitly
-use Sandbox mode. Sandbox builds and API imports reject the known production database, the production
-website, inherited production TikTok keys, unrelated platform credentials and live billing mode.
-The Sandbox page displays a testing banner. Its own database must contain only test accounts/data.
-
-## Provisioned database and verified hosting
-
-The owner authorized the existing MUSIC PROMOTION SECRETARY organization on 28 October 2026.
-Supabase project `slvhnpagtsprmivaujav` (Music Promotion Secretary TikTok Sandbox) is ACTIVE_HEALTHY
-in eu-central-2. Its planning, media, social connection, allowance and TikTok tables/functions are installed.
-Applied migrations: `sandbox_planning_and_tiktok_dependencies`, then `sandbox_tiktok_closed_pilot`.
-The latter includes the owner-account binding and refresh/reconnect fixes. No production records were copied.
-
-Verified: all application tables have RLS; anonymous users cannot read social connections or TikTok posts;
-rollback-only account isolation checks reject cross-account access; all users, owners, drafts, connections
-and posts remain empty. TikTok enabled/audited/url_verified and subscriber launch are all false.
-The security advisor returned only informational notices for deliberately policy-free private tables.
-No dispatch cron or production HTTP wakeup function was installed. Scheduled dispatch remains unconfigured.
-No auth user or owner grant has been created. The exact test email redirect configuration is now saved;
-a real test owner's email-link sign-in remains pending.
-
-The separate Vercel project `music-promotion-secretary-tiktok-sandbox` is deployed from
-`prepare/tiktok-sandbox-isolation`, commit `ff5939157962c671b697b9be97f57a43e014f856`.
-Deployment `dpl_F8tbphdxc62nTF69NnBvcvGBeDEM` completed Ready in 42 seconds.
-Stable website: https://music-promotion-secretary-tiktok-sa.vercel.app .
-The Sandbox origin variable was corrected to this exact origin, without a trailing slash.
-All eight required environment variable names are present in this separate project's Production environment.
-Credential values were not revealed; their live validity has not yet been tested.
-
-Verified over unauthenticated HTTPS: root, /tiktok, /terms and /privacy return 200 and the
-testing-only banner. /api/tiktok/creator and /api/tiktok/posts return 401 without a session.
-Billing status returns 503 with configured=false, testMode=true and paidLaunchOpen=false,
-consistent with the closed billing configuration.
-
-Supabase dashboard access was verified through GitHub account `paulakotaibe-art`.
-Its Site URL is now the exact stable Sandbox origin. The only additional Auth redirect URL is
-https://music-promotion-secretary-tiktok-sa.vercel.app/dashboard, matching the app's email-link flow.
-No wildcard redirect was added. Users, owner grants, social connections and TikTok posts remain empty.
-A fresh security advisor check returned only the same informational notices for deliberately closed
-private tables. Enabled, audited and url_verified remain false.
-
-Remaining blockers: establish an authorized test owner's app sign-in, verify that account's identity
-before granting owner access, authenticate the TikTok developer portal, configure the exact Sandbox
-website/callback and URL property, then verify OAuth. TikTok's cloud portal currently requires developer
-email/password sign-in. No credentials were requested while the owner was away.
-No video has been published or review submitted, and no production settings were changed.
-
-## Required isolated configuration
-
-Use a branch-scoped Vercel Preview environment for `prepare/tiktok-sandbox-isolation` with a stable
-branch URL, or a separate test project. Do not modify the existing Production variables.
-Do not promote this preview into the production project.
-
-| Variable | Sandbox value |
-| --- | --- |
-| `MUSIC_APP_ENV` | `sandbox` |
-| `MUSIC_SANDBOX_ORIGIN` | Exact stable HTTPS test website origin, without trailing slash or path |
-| `NEXT_PUBLIC_SUPABASE_URL` | Separate test project's `https://<ref>.supabase.co` origin |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Test project's browser-safe key; never a service-role key |
-| `METRICOOL_OAUTH_ENCRYPTION_KEY` | Newly generated 64-character hexadecimal key, unique to this test environment |
-| `TIKTOK_SANDBOX_CLIENT_KEY` | Client key from TikTok Sandbox 7699826491051280390 |
-| `TIKTOK_SANDBOX_CLIENT_SECRET` | Matching Sandbox secret, entered securely in Vercel |
-| `BILLING_MODE` | `test`; no Stripe keys are needed for this pilot |
-
-The Sandbox keys are used consistently by authorization, exchange, readiness and renewal.
-Missing Sandbox keys never fall back to the production `TIKTOK_CLIENT_*` values.
-Neither the app ID nor organization ID is a client key.
-
-## Database and hosting prerequisites
-
-1. Select the Supabase organization and check the actual cost before provisioning. Do not buy an upgrade.
-2. Install a reviewed schema-only copy in the separate project. Do not copy production users, media,
-   social connections, encrypted tokens, billing records, bridge secrets, dispatch secrets or worker jobs.
-   Existing SQL scripts have dependencies; inspect and verify installation order rather than executing
-   every script alphabetically. Default all subscriber and platform rollout gates to false.
-3. Create a test owner account, test-only media storage and a separate worker configuration. Check RLS,
-   owner identity, encrypted token storage, test origin and dispatch destinations before enabling any gate.
-   Authorizing Sandbox OAuth must write only to the test project's `social_connections` table.
-4. Build using the isolated settings. Confirm no existing queued/building/ready deployment of that commit
-   before requesting another. Keep existing deployment protection intact. If TikTok cannot reach the
-   selected public callback/media path under the protection settings, resolve the hosting design before
-   testing; never place protection bypass secrets into URLs or TikTok settings.
-5. In the TikTok Sandbox portal, use the exact test website, its public `/terms` and `/privacy`, and
-   `<MUSIC_SANDBOX_ORIGIN>/api/integrations/social/tiktok/callback` for Login Kit. Verify the test URL/media
-   property as TikTok requires; production URL verification does not verify another hostname.
-
-## Genuine demo still required
-
-The app requests `user.info.basic` and `video.publish`. It has no draft-upload flow using `video.upload`.
-The portal's included scopes must be assessed against actual review requirements; do not claim an
-unimplemented scope has been demonstrated. Use authorized target user `dr.paul5245` only after checking
-the Sandbox portal settings. Keep the production form as a draft.
-
-Record the real test website, connection and consent, connected creator, owned MP4 preview, editable
-caption, account-supported privacy and interactions, disclosures/music consent and explicit final review.
-Publishing and scheduled pilot actions require the owner's authorization. Keep the test private and
-subscriber publishing closed. Show the actual result or blocker without manufacturing a success screen.
-Never include keys, tokens or secret settings in the recording. Upload the resulting recording only
-when it accurately demonstrates the requested integration; submitting app review is a separate step.
-
-## Checks
-
-`node --test tests/*.test.mjs` includes callback/exchange consistency, Sandbox-only token renewal,
-production credential preservation, blocked production database access and build/runtime safeguards.
-These mocked tests establish configuration behavior, not a live TikTok integration.
+## Configuration boundaries
+MUSIC_APP_ENV=sandbox; MUSIC_SANDBOX_ORIGIN is the exact stable origin above.
+Use separate NEXT_PUBLIC_SUPABASE_URL and browser-safe key, BILLING_MODE=test,
+TIKTOK_SANDBOX_CLIENT_KEY/SECRET and a separate 64-character hex encryption key.
+Never copy production OAuth, billing, database or worker credentials.
+Auth Site URL is the stable Sandbox origin; allowed email redirect is its /dashboard URL.
+All public tables have RLS. Private tables are intentionally closed.
+Latest advisor also reported leaked password protection disabled; no auth protections were changed.
+No TikTok audit, public-publishing approval, demo recording or review submission has been completed.
