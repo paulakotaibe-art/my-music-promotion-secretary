@@ -15,14 +15,16 @@
 - 98 tests and Sandbox fixture build passed before that deployment.
 - Production database, credentials and website remain unchanged.
 
-## Scheduled worker: installation blocked
-The owner authorized completing the Sandbox worker. pg_cron and pg_net were enabled in the isolated database.
-The prepared database/tiktok-sandbox-worker.sql calls only the Sandbox /api/tiktok/dispatch endpoint using short-lived single-use nonces.
-Two installation requests returned Invalid or expired requestState. A subsequent read confirmed wake_tiktok_dispatch() does not exist.
-Do not describe scheduling as operational. No scheduled test was submitted; pending post count was zero.
-Browser session became unavailable and its replacement inventory has no open tabs.
-Resume by installing the reviewed worker in the test database, verifying the cron job, then testing an empty dispatch and checking its response before any owner-authorized scheduled post.
-Do not install the original tiktok-publishing.sql wakeup section: it points at the production website.
+## Scheduled worker: installed and infrastructure verified
+Installed database/tiktok-sandbox-worker.sql in isolated project slvhnpagtsprmivaujav on 28 October 2026.
+pg_cron job sandbox-tiktok-dispatch is active with schedule * * * * *.
+A scheduled run succeeded at 16:43 GMT.
+A separate authenticated empty HTTP dispatch returned 200 with {"claimed":0,"completed":0}, no timeout or error.
+No pending posts existed and no new video was submitted.
+The destination is exclusively https://music-promotion-secretary-tiktok-sa.vercel.app/api/tiktok/dispatch.
+Short-lived single-use nonces authenticate requests; no static worker secret or production credential was added.
+A real scheduled private publication still needs an explicit owner-reviewed post and its resulting completion check.
+Do not claim that this empty infrastructure test demonstrates a scheduled video publication.
 
 ## Configuration boundaries
 MUSIC_APP_ENV=sandbox; MUSIC_SANDBOX_ORIGIN is the exact stable origin above.
