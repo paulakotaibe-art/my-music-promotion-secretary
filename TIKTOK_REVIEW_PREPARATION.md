@@ -1,39 +1,35 @@
-# TikTok review preparation — 28 October 2026
+# TikTok review submission — 28 October 2026
 
-The owner explicitly authorized importing Sandbox configuration into the Production review draft.
-App: 7700557351711852565. Production review remains Draft, NOT submitted or approved.
-Imported Login Kit, Content Posting API Direct Post, scopes and tested callback.
-Verified Production URL property https://music-promotion-secretary-tiktok-sa.vercel.app/ using public/tiktokqEtFTo8ThCPeSgODt8A79vHD9RTyrO4L.txt.
-The portal form has one validation error: a demo video is required. Save fails until validation passes, so field edits are currently in the browser only; this file preserves exact entries.
-No production website, database, rollout flag or credential was changed.
+## Confirmed status
+TikTok developer portal now displays **In review** for Production app 7700557351711852565 (My Music Promotion Secretary).
+Submitted using the owner-authorized Production review draft. The portal confirms receipt and warns review may be delayed by request volume.
+Public Direct Post approval/audit has NOT been granted. Keep audited=false and subscriber publishing closed.
+No new TikTok video was published during review preparation.
 
-## Form entries
-- Name: My Music Promotion Secretary
-- Category: Social Networking
-- Description: Helps independent artists upload original videos, prepare captions and publish to their connected social accounts.
-- Website: https://music-promotion-secretary-tiktok-sa.vercel.app/
-- Terms: https://music-promotion-secretary-tiktok-sa.vercel.app/terms
-- Privacy: https://music-promotion-secretary-tiktok-sa.vercel.app/privacy
-- Platform: Web
-- Callback: https://music-promotion-secretary-tiktok-sa.vercel.app/api/integrations/social/tiktok/callback
-- Login Kit, Content Posting API, Direct Post enabled.
-- Included scopes: user.info.basic, video.publish, video.upload. Portal automatically includes video.upload with the product; Add scopes does not offer removal. Do not claim Upload-to-Inbox is implemented or demonstrated.
+## Submitted evidence
+- tiktok-preview-demo.mp4: compressed from owner-supplied 64-second preview recording, approximately 4.6 MB.
+- tiktok-settings-result-demo.mp4: compressed from owner-supplied 103-second final clip, approximately 5.2 MB.
+- Both preserve actual recorded interactions. No fabricated screens were added.
+- Footage shows reconnect/return, creator identity, saved MP4 selection, preview, Only me, AI disclosure and music consent, plus an existing verified nonpublic completion.
+- It does not show a new publication or an opened final-review panel, nor renewed TikTok consent for the already-authorized account. These limitations were explicitly stated in the submitted explanation.
 
-## Review explanation (923 characters)
-My Music Promotion Secretary is a web service intended for independent artists and creators to publish their own original videos. Login Kit and user.info.basic connect the creator's TikTok account and display the account identity. Content Posting API Direct Post and video.publish retrieve current creator settings and submit a video only after the creator selects an uploaded MP4, edits the caption, chooses an available privacy setting and interactions, completes applicable disclosures and music consent, and confirms the final review. Users see processing and verified completion through status checks. The demonstrated Sandbox flow successfully posted A Beautiful Life with SELF_ONLY visibility to the authorized test creator and returned PUBLISH_COMPLETE. Public customer publishing remains disabled pending approval and audit. The integration does not implement the Upload-to-Inbox flow associated with video.upload.
+## Submission reason
+Initial Login Kit and Direct Post review for an artist publishing web app; requesting review and public-post audit.
 
-## Required genuine demo
-Record MP4 or MOV under 50 MB. Show the real browser URL and user interactions:
-1. App sign-in, connect TikTok, official consent screen and return to connected creator identity. Do not record passwords, email links, one-time codes, developer credentials or tokens.
-2. Original MP4 upload/selection and video preview.
-3. Editable caption, manually chosen Only me visibility, account-supported interactions off, applicable commercial/AI disclosures and music/rights consent.
-4. Final review and owner-authorized private Publish.
-5. Processing and verified Completed with non-public visibility. Existing verified result may be shown honestly as an earlier successful test; do not present it as a new submission.
-Screenshots or a slideshow are not a substitute for a real interactive demonstration.
-Upload via portal App review, then validate and save. Only describe the review as pending once the portal confirms submission.
+## Submitted explanation
+My Music Promotion Secretary is intended for independent artists and creators to publish their own original videos. Login Kit/user.info.basic connect TikTok and display the creator identity. Direct Post/video.publish retrieve current creator settings and submit only after video selection, editable caption, manually chosen supported privacy/interactions, applicable disclosures, music consent and final confirmation. Status checks report processing and verified completion. The private Sandbox pilot returned PUBLISH_COMPLETE for SELF_ONLY; the owner confirmed playback. Attached recordings show reconnection (TikTok skips renewed consent for this already-authorized account), video preview/selection, privacy, disclosures, music consent and the existing completed private result. They do not show a fresh submission or the final-review panel. Public customer publishing remains gated pending approval/audit. video.upload is included by the portal but Upload-to-Inbox is not implemented.
 
-## Additional review risks
-Official guidelines reject private-only/internal utilities and unfinished test-only apps. This app is intended for independent artists, but current Sandbox testing banner and closed subscriber gate must not be misrepresented as an already launched public service.
-The demo website domain must match the submitted website. Sandbox must be used for a first app demonstration.
-The mandatory video.upload scope is not implemented; resolve scope requirements truthfully with TikTok rather than claiming an unsupported flow.
-An app review and the Direct Post audit/public visibility approval are not necessarily the same approval. Never set audited=true merely because a review was submitted.
+## Submitted configuration
+- Category Social Networking; platform Web.
+- Website https://music-promotion-secretary-tiktok-sa.vercel.app/
+- Terms /terms; privacy /privacy on the same verified origin.
+- Callback /api/integrations/social/tiktok/callback on the same origin.
+- Login Kit and Content Posting API with Direct Post enabled.
+- Scopes user.info.basic, video.publish, video.upload (automatically included by product).
+- Public signature public/tiktokqEtFTo8ThCPeSgODt8A79vHD9RTyrO4L.txt verifies this origin under the Production application.
+- Actual production hosting/database credentials were not changed.
+
+## Follow-up
+Read TikTok's review comments when available and address actual feedback. A generic application approval is not proof of Direct Post audit/public visibility approval.
+Known risks: mandatory video.upload is not implemented, demonstration gaps disclosed above, and Sandbox test-only presentation may need changes for public service review.
+Do not promise acceptance or a review date.
