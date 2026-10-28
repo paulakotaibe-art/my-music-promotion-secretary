@@ -2,14 +2,36 @@
 
 ## Status
 
-This branch prepares configuration isolation. No hosted Sandbox deployment, separate database,
-OAuth connection, TikTok video submission, demo recording or app approval is established by this change.
+This branch prepares configuration isolation. A separate database has now been provisioned as recorded below.
+No hosted Sandbox deployment, OAuth connection, TikTok video submission, demo recording or app approval exists.
 Production credentials, database settings and rollout flags have not been changed.
 
 The existing production website origin remains the default. Vercel Preview builds must explicitly
 use Sandbox mode. Sandbox builds and API imports reject the known production database, the production
 website, inherited production TikTok keys, unrelated platform credentials and live billing mode.
 The Sandbox page displays a testing banner. Its own database must contain only test accounts/data.
+
+## Provisioned database and current hosting blocker
+
+The owner authorized the existing MUSIC PROMOTION SECRETARY organization on 28 October 2026.
+Supabase project `slvhnpagtsprmivaujav` (Music Promotion Secretary TikTok Sandbox) is ACTIVE_HEALTHY
+in eu-central-2. Its planning, media, social connection, allowance and TikTok tables/functions are installed.
+Applied migrations: `sandbox_planning_and_tiktok_dependencies`, then `sandbox_tiktok_closed_pilot`.
+The latter includes the owner-account binding and refresh/reconnect fixes. No production records were copied.
+
+Verified: all application tables have RLS; anonymous users cannot read social connections or TikTok posts;
+rollback-only account isolation checks reject cross-account access; all users, owners, drafts, connections
+and posts remain empty. TikTok enabled/audited/url_verified and subscriber launch are all false.
+The security advisor returned only informational notices for deliberately policy-free private tables.
+No dispatch cron or production HTTP wakeup function was installed. Scheduled dispatch remains unconfigured.
+No auth user or owner grant has been created; test authentication and email redirect configuration remain pending.
+
+Vercel's existing project has deployment protection. A separate project named
+`music-promotion-secretary-tiktok-sandbox` was attempted in the same existing team, but the connector returned
+HTTP 403: “You don't have permission to create the project.” No CLI credential fallback is available.
+The user must create that test project in the same team through their Vercel dashboard before the agent
+can install its test-only environment settings. Do not modify existing project protection or production variables.
+Sandbox TikTok keys remain unknown and must be entered securely into the test project's settings.
 
 ## Required isolated configuration
 
