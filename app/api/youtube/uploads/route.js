@@ -1,3 +1,5 @@
+import deploymentConfig from '../../../../lib/deployment-config.cjs';
+import {youtubeTestAccess,youtubeTestPermission} from '../../../../lib/youtube-test-access.mjs';
 import {randomUUID} from 'node:crypto';
 import {billingAuth,usage,json} from '../../../../lib/billing';
 import {seal,unseal} from '../../../../lib/metricool-oauth.mjs';
@@ -46,6 +48,8 @@ export async function GET(request){
   if(error || de)throw Error('Unable to load your upload attempts.');
   let ctx;try{ctx=await context(auth,AbortSignal.timeout(20000));}catch{}
   const allowance=await usage(auth);
+  const testAccess=await youtubeTestAccess(auth);
+  const privateTestAllowed=youtubeTestPermission(deploymentConfig.sandboxMode(),testAccess,'private');
   let publicReady=false;
   const uploads=[];
   for(const row of rows || []){
@@ -56,7 +60,7 @@ export async function GET(request){
    if(live && row.mode==='private' && o?.verified && o.processed && o.privacy==='private')publicReady=true;
    uploads.push({id:row.id,mode:row.mode,createdAt:row.created_at,...(o?{videoId:o.videoId,url:o.url,privacy:o.privacy,publishAt:o.publishAt,processed:o.processed,processingStatus:o.processingStatus || 'unknown',verified:o.verified,failed:o.failed}:{}),liveVerified:live,message:o?.message || 'Outcome unconfirmed. Check YouTube Studio before another copy.'});
   }
-  return json({uploads,owner:allowance.owner,canPublish:allowance.canPublish,publicReady:allowance.owner?publicReady:allowance.canPublish,drafts:(drafts || []).filter(d=>d.media_kind!=='audio' && /\.mp4$/i.test(d.media_url || '')).map(d=>({id:d.id,title:d.title}))});
+  return json({uploads,owner:allowance.owner,privateTestAllowed,canPublish:allowance.canPublish||privateTestAllowed,publicReady:deploymentConfig.sandboxMode()?false:allowance.owner?publicReady:allowance.canPublish,drafts:(drafts || []).filter(d=>d.media_kind!=='audio' && /\.mp4$/i.test(d.media_url || '')).map(d=>({id:d.id,title:d.title}))});
  }catch{return json({message:'Unable to check uploads. Reconnect YouTube if authorization has expired.'},503);}
 }
 export async function POST(request){
@@ -70,8 +74,11 @@ export async function POST(request){
   if(!ownedMediaUrl(draft.media_url,auth.user.id) || !/\.mp4$/i.test(draft.media_url) || draft.media_kind==='audio')throw Error('Upload an MP4 video to your release studio and save the draft first.');
   const metadata=videoMetadata(draft,body);
   const allowance=await usage(auth,body.mode==='scheduled'?metadata.status.publishAt:undefined);
-  if(!allowance.owner && body.mode==='private')throw Error('Private tests are limited to the owner pilot.');
-  if(!allowance.canPublish)throw Error(allowance.reason || 'Publishing is not available.');
+  const sandbox=deploymentConfig.sandboxMode();
+  if(sandbox&&body.mode!=='private')throw Error('Only private YouTube testing is available in the Sandbox.');
+  const privateTestAllowed=youtubeTestPermission(sandbox,await youtubeTestAccess(auth),body.mode);
+  if(!allowance.owner && body.mode==='private'&&!privateTestAllowed)throw Error('Private tests are limited to the owner pilot.');
+  if(!allowance.canPublish&&!privateTestAllowed)throw Error(allowance.reason || 'Publishing is not available.');
   const signal=AbortSignal.timeout(40000),{connection:c,call}=await context(auth,signal);
   if(allowance.owner && body.mode!=='private'){
    const {data:rows,error:e}=await auth.client.from('youtube_uploads').select('*').eq('user_id',auth.user.id).eq('mode','private').eq('channel_id',c.channel_id).limit(20);
