@@ -62,3 +62,9 @@ test('build config and runtime imports both reject a sandbox pointed at producti
     assert.doesNotMatch(result.stderr,/sandbox-secret/);
   }
 });
+
+test('Sandbox-specific YouTube configuration preserves production credential rejection',()=>{
+ const isolated={...sandbox,YOUTUBE_SANDBOX_CLIENT_ID:'test-client',YOUTUBE_SANDBOX_CLIENT_SECRET:'test-secret'};
+ assert.equal(config.applicationOrigin(isolated),sandbox.MUSIC_SANDBOX_ORIGIN);
+ assert.throws(()=>config.applicationOrigin({...isolated,YOUTUBE_CLIENT_ID:'production-client'}));
+});
