@@ -64,6 +64,8 @@ A tick means the stated milestone has evidence, not that the whole platform is r
 | 08 | [x] | Setup/status guide routes invited tester to private YouTube studio | New link verified in signed-in Edge; public permission stays pending | 30 Oct 2026 |
 | 09 | [x] | Correct device/profile sign-in guidance and private/public help text | Updated source; full build passed | 30 Oct 2026 |
 | 10 | [x] | Dated master checklist and daily progress review created | This file; daily evening automation | 30 Oct 2026 |
+| 27 | [x] | Owner Facebook private/unpublished video test completed | Confirmed by Dr Paul on 30 Oct; original test date not re-established | Previously completed; recorded 30 Oct 2026 |
+| 28 | [x] | Owner TikTok private draft/upload test completed | Confirmed by Dr Paul on 30 Oct; does not imply public Direct Post audit approval | Previously completed; recorded 30 Oct 2026 |
 | 11 | [ ] | Google branding verified and published | Missing Verify Branding control; ownership reported verified | — |
 | 12 | [ ] | Required Google data-access permissions verified | Obtain actual approval; prepare accurate demo if requested | — |
 | 13 | [ ] | YouTube public customer publishing permitted and verified | Confirm applicable Google/YouTube audit requirements and real customer result | — |
@@ -82,11 +84,13 @@ A tick means the stated milestone has evidence, not that the whole platform is r
 | 26 | [ ] | Final public release and paid onboarding authorized | All gates pass; owner approves live billing and production release | — |
 
 ## Dated progress log
+- **30 October 2026 — history correction:** Dr Paul confirmed that the Facebook and TikTok private tests were already completed. Added separate completed owner-pilot milestones 27 and 28; retained customer/public/scheduling acceptance as separate unticked milestones. Recording date is not represented as the original test date.
 - **30 October 2026:** signed-in customer browser inspected. Fixed sandbox readiness failing on absent Facebook rollout function. Confirmed processed private YouTube upload and unchanged 2/3 allowance. Implemented and deployed clearer private-test setup/status links and device/profile guidance. 109 Node tests and full Next.js build passed. Setup link reached YouTube studio in Edge. Separate campaign remains unconfirmed.
 - **Next work:** verify remaining status/help links; prepare platform review evidence and reconcile the separate campaign receipt before any repeat submission. Continue implementation and testing that does not require account-holder consent or approval.
 
 ## Daily update rules
 - Preserve IDs and dated history. Add a new entry rather than overwriting yesterday's evidence.
+- Preserve previously completed private/owner tests when reporting customer rollout gaps. A user-confirmed achievement is recorded with its source and confirmation date, without inventing a fresh platform receipt or original completion date.
 - Tick only the exact accepted milestone. Record deployment/commit or external receipt when applicable.
 - Report completed today, outstanding work, blockers and actions for Dr Paul.
 - Reopen a tick if new evidence shows a regression.
