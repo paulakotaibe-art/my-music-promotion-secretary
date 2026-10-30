@@ -16,6 +16,7 @@ export default function DirectYouTube(){
   catch(e){setMessage(e.message);}finally{setBusy(false);try{setData(await api());}catch{}}
  }
  useEffect(()=>{if(data && !data.owner && !data.privateTestAllowed && mode==='private')setMode('public');},[data,mode]);
+ const selected=data?.drafts?.find(d=>d.id===draftId);
  const waiting=data?.uploads?.some(u=>u.liveVerified && u.processingStatus==='processing' && !u.failed);
  useEffect(()=>{if(!waiting || busy)return;const timer=setTimeout(()=>load(),30000);return()=>clearTimeout(timer);},[waiting,busy,data]);
  const state=busy?'checking':data?.publicReady?'ready':waiting?'processing':data?.uploads?.some(u=>u.failed)?'failed':'waiting';
@@ -25,13 +26,14 @@ export default function DirectYouTube(){
  {message&&<p className="activity-message" role="status">{message}</p>}
  <button disabled={busy} onClick={load}>{busy?'Working…':'Refresh upload status'}</button>
  {data&&<>
- <Usage at={mode==='scheduled' && date && Number.isFinite(Date.parse(date))?new Date(date).toISOString():undefined} refreshKey={data}/>
+ <Usage privateTestAllowed={data.privateTestAllowed} at={mode==='scheduled' && date && Number.isFinite(Date.parse(date))?new Date(date).toISOString():undefined} refreshKey={data}/>
  <section className={`activity-panel activity-${state}`} role="status" aria-live="polite" aria-busy={busy}><span className="activity-kicker">{busy?'Checking latest status…':'LIVE UPLOAD STATUS'}</span>
  {!data.owner && !data.canPublish?<><strong>Subscriber publishing is being prepared</strong><p>Your allowance appears above. Connecting your channel does not activate publishing before launch.</p></>:data.privateTestAllowed?<><strong>Private customer test available</strong><p>Only private uploads are enabled for this invited Sandbox test account. Each attempt reserves one trial promotion, including an unconfirmed attempt.</p></>:data.publicReady?<><strong>✓ Ready for public publishing</strong><p>You can now choose Public now or Schedule public release. Your allowance is checked again when you publish.</p></>:data.uploads.some(u=>u.liveVerified && u.processingStatus==='processing' && !u.failed)?<><strong>⏳ YouTube is still processing your video</strong><p>Your upload has arrived. Please wait while YouTube prepares it for playback. Public publishing and scheduling will unlock after processing finishes.</p><p>You do not need to upload it again. This page checks automatically every 30 seconds while open. You can also use Refresh upload status.</p></>:data.uploads.some(u=>u.failed)?<><strong>Video needs attention</strong><p>YouTube reported a processing failure. Open the video in YouTube Studio for details before trying again.</p></>:data.uploads.length?<><strong>Waiting for YouTube confirmation</strong><p>We cannot yet confirm that processing has finished. Refresh upload status, or check the video in YouTube Studio. You do not need to upload another copy.</p></>:<><strong>Start with a private test</strong><p>Upload your video privately first. Its processing progress will appear here.</p></>}
  </section>
  <form className="studio-form" onSubmit={e=>{e.preventDefault();setReview(true);}} onChange={()=>setReview(false)}>
  <p><label>Saved video <select required value={draftId} onChange={e=>setDraft(e.target.value)}><option value="">Choose your video</option>{data.drafts.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select></label></p>
  {!data.drafts.length&&<p><a href="/dashboard">Upload an MP4 in the release studio and save its draft first.</a></p>}
+ {selected&&<section aria-label="Selected video"><h2>{selected.title}</h2><video key={selected.id} controls preload="metadata" src={selected.mediaUrl} className="tiktok-preview" aria-label="Selected video preview"/><p>Play this preview to confirm it is the video you want to upload.</p></section>}
  <p><label>Visibility <select value={mode} onChange={e=>setMode(e.target.value)}>{(data.owner||data.privateTestAllowed)&&<option value="private">Private test</option>}{data.publicReady&&<><option value="public">Public now</option><option value="scheduled">Schedule public release</option></>}</select></label></p>
  {mode==='scheduled'&&<p><label>Publication date and time (your device timezone)<input required type="datetime-local" value={date} onChange={e=>setDate(e.target.value)}/></label></p>}
  <p><label>Made for children? <select required value={kids} onChange={e=>setKids(e.target.value)}><option value="">Choose audience</option><option value="no">No</option><option value="yes">Yes</option></select></label></p>

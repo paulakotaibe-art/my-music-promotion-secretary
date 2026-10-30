@@ -60,7 +60,7 @@ export async function GET(request){
    if(live && row.mode==='private' && o?.verified && o.processed && o.privacy==='private')publicReady=true;
    uploads.push({id:row.id,mode:row.mode,createdAt:row.created_at,...(o?{videoId:o.videoId,url:o.url,privacy:o.privacy,publishAt:o.publishAt,processed:o.processed,processingStatus:o.processingStatus || 'unknown',verified:o.verified,failed:o.failed}:{}),liveVerified:live,message:o?.message || 'Outcome unconfirmed. Check YouTube Studio before another copy.'});
   }
-  return json({uploads,owner:allowance.owner,privateTestAllowed,canPublish:allowance.canPublish||privateTestAllowed,publicReady:deploymentConfig.sandboxMode()?false:allowance.owner?publicReady:allowance.canPublish,drafts:(drafts || []).filter(d=>d.media_kind!=='audio' && /\.mp4$/i.test(d.media_url || '')).map(d=>({id:d.id,title:d.title}))});
+  return json({uploads,owner:allowance.owner,privateTestAllowed,canPublish:allowance.canPublish||privateTestAllowed,publicReady:deploymentConfig.sandboxMode()?false:allowance.owner?publicReady:allowance.canPublish,drafts:(drafts || []).filter(d=>d.media_kind!=='audio' && /\.mp4$/i.test(d.media_url || '') && ownedMediaUrl(d.media_url,auth.user.id)).map(d=>({id:d.id,title:d.title,mediaUrl:d.media_url}))});
  }catch{return json({message:'Unable to check uploads. Reconnect YouTube if authorization has expired.'},503);}
 }
 export async function POST(request){
