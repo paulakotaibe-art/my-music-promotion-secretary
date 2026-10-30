@@ -47,3 +47,47 @@
 - 109 Node unit tests passed, including the new private-test readiness cases.
 - Next.js production build passed with synthetic isolated Sandbox build settings and no live credentials.
 - Browser acceptance of this change set is checked after the Sandbox deployment; unit tests do not establish external publication.
+
+## Master checklist — last reviewed 30 October 2026
+
+A tick means the stated milestone has evidence, not that the whole platform is ready. Unticked implementation may already exist; it stays unticked until its complete acceptance check passes. These items differ in size, so their count is not a percentage-complete estimate.
+
+| ID | Done | Milestone / acceptance check | Evidence or next action | Completed |
+|---|---|---|---|---|
+| 01 | [x] | Connected Edge access to invited customer account | Signed-in dashboard inspected | 30 Oct 2026 |
+| 02 | [x] | Email-link sign-in works on the customer computer | Dashboard identifies invited account | 30 Oct 2026 |
+| 03 | [x] | Separate sandbox deployment and isolation checks | Sandbox Ready; environment tests pass | 30 Oct 2026 |
+| 04 | [x] | Customer desktop dashboard, drafts and allowance display | Existing MP4 draft and 2/3 remaining visible | 30 Oct 2026 |
+| 05 | [x] | Customer YouTube channel connection saved | Akotaibe Paul shown in connections | 30 Oct 2026 |
+| 06 | [x] | Customer private YouTube upload processed | Saved direct-upload receipt links v8eiR3jMcPw | 30 Oct 2026 |
+| 07 | [x] | Publishing access loads in isolated sandbox | Missing Facebook RPC handled with Facebook disabled | 30 Oct 2026 |
+| 08 | [x] | Setup/status guide routes invited tester to private YouTube studio | New link verified in signed-in Edge; public permission stays pending | 30 Oct 2026 |
+| 09 | [x] | Correct device/profile sign-in guidance and private/public help text | Updated source; full build passed | 30 Oct 2026 |
+| 10 | [x] | Dated master checklist and daily progress review created | This file; daily evening automation | 30 Oct 2026 |
+| 11 | [ ] | Google branding verified and published | Missing Verify Branding control; ownership reported verified | — |
+| 12 | [ ] | Required Google data-access permissions verified | Obtain actual approval; prepare accurate demo if requested | — |
+| 13 | [ ] | YouTube public customer publishing permitted and verified | Confirm applicable Google/YouTube audit requirements and real customer result | — |
+| 14 | [ ] | YouTube customer scheduling verified | Authorized future schedule, dispatch and final result, no duplicate | — |
+| 15 | [ ] | Meta customer permissions and required business/Tech Provider approval | Confirm current portal state; owner success is separate | — |
+| 16 | [ ] | Customer Facebook OAuth, Page selection and reconnect verified | Independent customer browser pilot; sandbox has no Facebook configuration | — |
+| 17 | [ ] | Customer Facebook immediate and scheduled release verified | Receipt and actual Page result, shared allowance and duplicate protection | — |
+| 18 | [ ] | TikTok app review / Direct Post audit and necessary scopes verified | Confirm real portal approval; do not infer approval from elapsed time | — |
+| 19 | [ ] | Customer TikTok authorization and reconnection verified | Credentials configured; current tester not connected; holder consent needed | — |
+| 20 | [ ] | Customer TikTok submission, status recovery and schedule verified | Actual allowed-visibility result plus scheduled run | — |
+| 21 | [ ] | Separate campaign and direct-upload statuses reconciled clearly | Existing campaign still unconfirmed; direct private upload already processed | — |
+| 22 | [ ] | Subscription lifecycle fully accepted for launch deployment | Test active, failed, expired, cancelled and renewed subscriptions; live activation later | — |
+| 23 | [ ] | Shared allowance/queue/channel binding complete across platforms | Validate concurrent customer flows, reset, reschedule and cancellation | — |
+| 24 | [ ] | Support, privacy, terms and deletion/revocation flow reviewed | Match wording and behavior to actual platform data use | — |
+| 25 | [ ] | Final desktop/mobile and failure/recovery integration accepted | Slow networks, expired grants, reconnect, account isolation and accessibility | — |
+| 26 | [ ] | Final public release and paid onboarding authorized | All gates pass; owner approves live billing and production release | — |
+
+## Dated progress log
+- **30 October 2026:** signed-in customer browser inspected. Fixed sandbox readiness failing on absent Facebook rollout function. Confirmed processed private YouTube upload and unchanged 2/3 allowance. Implemented and deployed clearer private-test setup/status links and device/profile guidance. 109 Node tests and full Next.js build passed. Setup link reached YouTube studio in Edge. Separate campaign remains unconfirmed.
+- **Next work:** verify remaining status/help links; prepare platform review evidence and reconcile the separate campaign receipt before any repeat submission. Continue implementation and testing that does not require account-holder consent or approval.
+
+## Daily update rules
+- Preserve IDs and dated history. Add a new entry rather than overwriting yesterday's evidence.
+- Tick only the exact accepted milestone. Record deployment/commit or external receipt when applicable.
+- Report completed today, outstanding work, blockers and actions for Dr Paul.
+- Reopen a tick if new evidence shows a regression.
+- If connected sources are unavailable, report that limitation instead of marking an item complete.
