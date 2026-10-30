@@ -44,9 +44,9 @@
 - Never claim overall completion from unit tests alone.
 
 ## Validation for the current change set
-- 109 Node unit tests passed, including the new private-test readiness cases.
+- Latest implementation validation recorded on 30 October: 112 Node unit tests passed, including private-test readiness and signed receipt reconciliation. This progress review did not rerun the test suite.
 - Next.js production build passed with synthetic isolated Sandbox build settings and no live credentials.
-- Browser acceptance of this change set is checked after the Sandbox deployment; unit tests do not establish external publication.
+- Signed-in Edge acceptance was completed for the private-test setup/status links and processed receipt display on 30 October. Unit tests and deployment success do not establish public customer publication.
 
 ## Master checklist — last reviewed 30 October 2026
 
@@ -84,6 +84,7 @@ A tick means the stated milestone has evidence, not that the whole platform is r
 | 26 | [ ] | Final public release and paid onboarding authorized | All gates pass; owner approves live billing and production release | — |
 
 ## Dated progress log
+- **30 October 2026, 19:08 UK — progress review:** Current branch head before this review was bba1cea0f6dabe257a28a7d3d8c4317e991ed844 (18:19:57 UTC); no subsequent implementation commits were present. GitHub reports successful Sandbox deployment for that head: https://vercel.com/paulakotaibe-2592s-projects/music-promotion-secretary-tiktok-sandbox/DpNXApCqng9Mj8GbXwD8BSYbeUh7 . The receipt implementation commit 443808878b283674b4ba2ffebc8be30bc9dc3de0 also has a successful Sandbox check. A failed x96x preview was inspected and explicitly rejected by the isolated-Sandbox configuration guard; no guard was bypassed and no production release was performed. Checklist remains **13 completed / 28 milestones; 15 open**, with no new ticks in this review. Google/Meta/TikTok approval portals and the customer's current browser session were not checked in this review; their last verified states are retained. Immediate user dependency remains TikTok account-holder login/consent. Unblocked work includes support/privacy/deletion review, further mobile/accessibility and failure-recovery checks, subscription lifecycle acceptance planning, and platform demonstration preparation. No media submission, grant change, payment or public release was made.
 - **30 October 2026 — narrow-screen and connection checks:** At the narrow viewport, dashboard, YouTube studio, setup guide and help had matching 375px layout/content widths (no horizontal overflow). Original viewport restored. Full mobile/recovery milestone 25 remains unticked. Customer TikTok Connect reached TikTok's login screen; account-holder login and authorization are now required. No TikTok permission grant or publication was completed.
 - **30 October 2026 — receipt reconciliation:** Read-only database inspection established the sandbox reservation and private upload have the same attempt and draft IDs. Added signature/binding checks and corrected the dashboard classification. Edge now shows Private YouTube test · Processed and its verification time; allowance remains 2/3. This supersedes the earlier provisional interpretation of a separate unconfirmed campaign. 112 unit tests and Next.js build passed; Sandbox deployment succeeded. No upload, reservation release, or public publishing occurred.
 - **30 October 2026 — history correction:** Dr Paul confirmed that the Facebook and TikTok private tests were already completed. Added separate completed owner-pilot milestones 27 and 28; retained customer/public/scheduling acceptance as separate unticked milestones. Recording date is not represented as the original test date.
