@@ -4,6 +4,7 @@ import {tiktokAccess} from '../../../../lib/tiktok-access.mjs';
 import {publishingReadiness} from '../../../../lib/publishing-readiness.mjs';
 import deploymentConfig from '../../../../lib/deployment-config.cjs';
 import {facebookReadinessAccess} from '../../../../lib/facebook-readiness.mjs';
+import {youtubeTestAccess,youtubeTestPermission} from '../../../../lib/youtube-test-access.mjs';
 export const dynamic='force-dynamic';
 export async function GET(request){
  let auth;try{auth=await billingAuth(request);}catch{return json({message:'Please sign in to check your publishing access.'},401);}
@@ -12,6 +13,7 @@ export async function GET(request){
  if(ye||se||fe)throw Error();
  const connections={youtube:{connected:!!yt}};
  for(const row of social||[]){const saved=unseal(row.encrypted_connection);connections[row.provider]={connected:true,publishingEnabled:row.provider==='facebook'?facebookAccess?.enabled===true:row.provider==='tiktok'&&tiktok.enabled===true,pageSelected:!!saved.pages?.some(p=>p.id===saved.selectedPage?.id&&p.access_token)};}
- return json(publishingReadiness(allowance,connections));
+ const privateAccess=await youtubeTestAccess(auth);
+ return json(publishingReadiness(allowance,connections,{youtubePrivateTestAllowed:youtubeTestPermission(deploymentConfig.sandboxMode(),privateAccess,'private')}));
  }catch{return json({message:'Unable to check publishing access. Refresh later.'},503);}
 }
