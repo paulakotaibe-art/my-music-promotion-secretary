@@ -1,7 +1,8 @@
+import HomeEmailReturn from './components/HomeEmailReturn';
 export default function Home() {
   return (
     <main className="container">
-      <section className="hero">
+      <HomeEmailReturn><section className="hero">
         <h1>My Music Promotion Secretary</h1>
 
         <p>
@@ -19,7 +20,7 @@ export default function Home() {
         <a className="button" href="/dashboard">
           Go to Dashboard
         </a>
-      </section>
+      </section></HomeEmailReturn>
     </main>
   );
 }

@@ -2,14 +2,18 @@ import {billingAuth,usage,json} from '../../../../lib/billing';
 import {unseal} from '../../../../lib/metricool-oauth.mjs';
 import {tiktokAccess} from '../../../../lib/tiktok-access.mjs';
 import {publishingReadiness} from '../../../../lib/publishing-readiness.mjs';
+import deploymentConfig from '../../../../lib/deployment-config.cjs';
+import {facebookReadinessAccess} from '../../../../lib/facebook-readiness.mjs';
+import {youtubeTestAccess,youtubeTestPermission} from '../../../../lib/youtube-test-access.mjs';
 export const dynamic='force-dynamic';
 export async function GET(request){
  let auth;try{auth=await billingAuth(request);}catch{return json({message:'Please sign in to check your publishing access.'},401);}
  try{
- const [allowance,{data:yt,error:ye},{data:social,error:se},{data:facebookAccess,error:fe},tiktok]=await Promise.all([usage(auth),auth.client.from('youtube_connections').select('channel_id').eq('user_id',auth.user.id).maybeSingle(),auth.client.from('social_connections').select('provider,encrypted_connection').eq('user_id',auth.user.id),auth.client.rpc('facebook_publishing_access'),tiktokAccess(auth)]);
+ const [allowance,{data:yt,error:ye},{data:social,error:se},{data:facebookAccess,error:fe},tiktok]=await Promise.all([usage(auth),auth.client.from('youtube_connections').select('channel_id').eq('user_id',auth.user.id).maybeSingle(),auth.client.from('social_connections').select('provider,encrypted_connection').eq('user_id',auth.user.id),facebookReadinessAccess(auth,deploymentConfig.sandboxMode()),tiktokAccess(auth)]);
  if(ye||se||fe)throw Error();
  const connections={youtube:{connected:!!yt}};
  for(const row of social||[]){const saved=unseal(row.encrypted_connection);connections[row.provider]={connected:true,publishingEnabled:row.provider==='facebook'?facebookAccess?.enabled===true:row.provider==='tiktok'&&tiktok.enabled===true,pageSelected:!!saved.pages?.some(p=>p.id===saved.selectedPage?.id&&p.access_token)};}
- return json(publishingReadiness(allowance,connections));
+ const privateAccess=await youtubeTestAccess(auth);
+ return json(publishingReadiness(allowance,connections,{youtubePrivateTestAllowed:youtubeTestPermission(deploymentConfig.sandboxMode(),privateAccess,'private')}));
  }catch{return json({message:'Unable to check publishing access. Refresh later.'},503);}
 }

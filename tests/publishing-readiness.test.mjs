@@ -32,3 +32,12 @@ test('TikTok never treats ownership or a saved connection as a publishing grant'
  assert.equal(get(true,{connected:false,publishingEnabled:true}).ready,false);
  assert.equal(get(false,{}).studio,'/tiktok');
 });
+
+test('invited private test has a studio without enabling public customer publishing',()=>{
+ const allowance={owner:false,plan:'trial',limit:3,remaining:2,canPublish:false};
+ const r=publishingReadiness(allowance,connections,{youtubePrivateTestAllowed:true});
+ const yt=r.channels[0];assert.equal(yt.ready,false);assert.equal(yt.privateTestAvailable,true);assert.equal(yt.studio,'/youtube-test');assert.match(yt.reason,/Public publishing and scheduling remain closed/);assert.equal(yt.steps[1].complete,false);assert.equal(r.channels[1].ready,false);assert.equal(r.channels[2].ready,false);
+ for(const a of [{...allowance,remaining:0},{...allowance,owner:true}])assert.equal(publishingReadiness(a,connections,{youtubePrivateTestAllowed:true}).channels[0].privateTestAvailable,false);
+ assert.equal(publishingReadiness(allowance,{}, {youtubePrivateTestAllowed:true}).channels[0].privateTestAvailable,false);
+ assert.equal(publishingReadiness(allowance,connections).channels[0].privateTestAvailable,false);
+});

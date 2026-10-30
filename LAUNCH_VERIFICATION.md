@@ -1,3 +1,5 @@
+> Historical record from 23 October. For current verification and launch blockers, read [LAUNCH_READINESS_2026-10-29.md](LAUNCH_READINESS_2026-10-29.md). The future-dated pilot statements below describe the original observation date, not today's state.
+
 # Launch verification — 23 October 2026
 
 ## Verified

@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {sandboxYouTubeReceipt} from '../lib/youtube-submission-status.mjs';
+const s={id:'attempt',user_id:'alice',draft_id:'draft',quota_released:false};
+const u={id:'attempt',user_id:'alice',draft_id:'draft',channel_id:'channel',mode:'private',outcome_signature:'valid',outcome:{id:'attempt',userId:'alice',channelId:'channel',mode:'private',verified:true,processed:true,privacy:'private',checkedAt:'2026-10-30T10:00:00Z'}};
+const verify=(o,sig)=>sig==='valid';
+test('matching signed private receipt reconciles its reservation without claiming public release',()=>{const r=sandboxYouTubeReceipt(s,u,verify);assert.match(r.resultLabel,/Processed/);assert.match(r.message,/not a public release/);assert.equal(r.released,false);assert.equal(r.directUrl,'/youtube-test');assert.equal(r.checkedAt,u.outcome.checkedAt);assert.equal(r.videoId,undefined);});
+test('missing, unsigned or mismatched uploads cannot show processed',()=>{for(const change of [{id:'other'},{user_id:'bob'},{draft_id:'other'},{mode:'public'},{outcome_signature:'invalid'},{outcome:{...u.outcome,userId:'bob'}},{outcome:{...u.outcome,id:'other'}},{outcome:{...u.outcome,channelId:'other'}},{outcome:{...u.outcome,mode:'public'}}])assert.doesNotMatch(sandboxYouTubeReceipt(s,{...u,...change},verify).resultLabel,/Processed/);assert.doesNotMatch(sandboxYouTubeReceipt(s,null,verify).resultLabel,/Processed/);});
+test('unprocessed, public or failed outcomes never appear as completed private tests',()=>{for(const change of [{verified:false},{processed:false},{privacy:'public'},{failed:true}])assert.doesNotMatch(sandboxYouTubeReceipt(s,{...u,outcome:{...u.outcome,...change}},verify).resultLabel,/Processed/);});
