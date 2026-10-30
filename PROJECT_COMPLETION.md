@@ -11,7 +11,7 @@
 - Allowance: 2 of 3 trial promotions remaining; zero queued. Displayed access ends 5 November 2026.
 - YouTube connection saved for Akotaibe Paul.
 - Direct YouTube studio shows an existing processed private upload: https://www.youtube.com/watch?v=v8eiR3jMcPw .
-- The dashboard campaign titled “Preserving God cteation” still separately reports Awaiting confirmation. Do not treat the direct-upload receipt as evidence that this separate campaign was delivered. Do not resubmit an uncertain attempt automatically.
+- The dashboard reservation for “Preserving God cteation” was reconciled to its private YouTube upload by matching attempt/user/draft IDs and signed outcome. It now shows Private YouTube test · Processed with the last verification time. The original unknown display was caused by an unrecognized sandbox_youtube_private provider label, not proof of a separate failed submission. No new upload or allowance adjustment was made.
 - Facebook and TikTok are not connected for this customer account.
 
 ## Completed sandbox correction
@@ -30,7 +30,7 @@
 ## Final integration checklist
 - Verify the setup-guide private-test link and publishing-status link both reach the same YouTube studio.
 - Keep Ready to Publish → review → Publish and the existing audience/disclosure/rights choices.
-- Keep direct upload receipts and campaign-submission receipts distinct, including allowance reservations.
+- Bind direct-upload outcomes to their exact allowance reservation by attempt, user, draft and channel; distinguish all unrelated submissions.
 - Verify unchanged trial allowance after read-only checks.
 - Complete a separate full customer flow for each platform after its required approval.
 - Reconcile active/expired/cancelled subscription and weekly/queue limits in the deployment intended for public release.
@@ -76,7 +76,7 @@ A tick means the stated milestone has evidence, not that the whole platform is r
 | 18 | [ ] | TikTok app review / Direct Post audit and necessary scopes verified | Confirm real portal approval; do not infer approval from elapsed time | — |
 | 19 | [ ] | Customer TikTok authorization and reconnection verified | Credentials configured; current tester not connected; holder consent needed | — |
 | 20 | [ ] | Customer TikTok submission, status recovery and schedule verified | Actual allowed-visibility result plus scheduled run | — |
-| 21 | [ ] | Separate campaign and direct-upload statuses reconciled clearly | Existing campaign still unconfirmed; direct private upload already processed | — |
+| 21 | [x] | Private YouTube reservation and signed upload status reconciled | Same attempt/user/draft; signed private processed receipt; dashboard verified in Edge | 30 Oct 2026 |
 | 22 | [ ] | Subscription lifecycle fully accepted for launch deployment | Test active, failed, expired, cancelled and renewed subscriptions; live activation later | — |
 | 23 | [ ] | Shared allowance/queue/channel binding complete across platforms | Validate concurrent customer flows, reset, reschedule and cancellation | — |
 | 24 | [ ] | Support, privacy, terms and deletion/revocation flow reviewed | Match wording and behavior to actual platform data use | — |
@@ -84,9 +84,10 @@ A tick means the stated milestone has evidence, not that the whole platform is r
 | 26 | [ ] | Final public release and paid onboarding authorized | All gates pass; owner approves live billing and production release | — |
 
 ## Dated progress log
+- **30 October 2026 — receipt reconciliation:** Read-only database inspection established the sandbox reservation and private upload have the same attempt and draft IDs. Added signature/binding checks and corrected the dashboard classification. Edge now shows Private YouTube test · Processed and its verification time; allowance remains 2/3. This supersedes the earlier provisional interpretation of a separate unconfirmed campaign. 112 unit tests and Next.js build passed; Sandbox deployment succeeded. No upload, reservation release, or public publishing occurred.
 - **30 October 2026 — history correction:** Dr Paul confirmed that the Facebook and TikTok private tests were already completed. Added separate completed owner-pilot milestones 27 and 28; retained customer/public/scheduling acceptance as separate unticked milestones. Recording date is not represented as the original test date.
 - **30 October 2026:** signed-in customer browser inspected. Fixed sandbox readiness failing on absent Facebook rollout function. Confirmed processed private YouTube upload and unchanged 2/3 allowance. Implemented and deployed clearer private-test setup/status links and device/profile guidance. 109 Node tests and full Next.js build passed. Setup link reached YouTube studio in Edge. Separate campaign remains unconfirmed.
-- **Next work:** verify remaining status/help links; prepare platform review evidence and reconcile the separate campaign receipt before any repeat submission. Continue implementation and testing that does not require account-holder consent or approval.
+- **Next work:** prepare platform review evidence; continue the remaining customer connection, mobile/recovery and subscription acceptance checks. The existing private-test receipt has been reconciled; do not create another upload merely to test the status display. Continue implementation and testing that does not require account-holder consent or approval.
 
 ## Daily update rules
 - Preserve IDs and dated history. Add a new entry rather than overwriting yesterday's evidence.
