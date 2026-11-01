@@ -15,6 +15,8 @@ export default function DashboardPage() {
   const [artistName, setArtistName] = useState("");
   const [songLink, setSongLink] = useState("");
   const [songs, setSongs] = useState([]);
+  const [songsUnavailable, setSongsUnavailable] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [accessError, setAccessError] = useState('');
@@ -31,10 +33,12 @@ export default function DashboardPage() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      setErrorMessage(error.message);
+      setSongsUnavailable(true);
+      setErrorMessage('Saved listening links are unavailable right now. You can still use the release studio above.');
       return;
     }
 
+    setSongsUnavailable(false);
     setErrorMessage("");
     setSongs(data || []);
   };
@@ -121,7 +125,7 @@ export default function DashboardPage() {
       setNotice(editingId ? "Song updated successfully." : "Song saved successfully.");
       await fetchSongs(user.id);
     } catch (error) {
-      setErrorMessage(error.message || "Unable to save. Please try again.");
+      setErrorMessage("The listening link could not be saved. Check your connection and retry.");
     } finally {
       setSaving(false);
     }
@@ -134,11 +138,12 @@ export default function DashboardPage() {
   };
 
   const handleLogout = async () => {
+    setLogoutError('');
     try{
       const {error}=await withDeadline(()=>supabase.auth.signOut(),8000,'Sign-out timed out.');
       if(error)throw error;
       setUser(null);setSongs([]);setLoading(true);router.replace('/login');
-    }catch{setErrorMessage('Sign-out could not be confirmed. Check your connection and try again.');}
+    }catch{setLogoutError('Sign-out could not be confirmed. Check your connection and try again.');}
   };
 
   if(accessError)return <main id="main-content" tabIndex={-1} className="container studio-ui"><section className="hero dashboard-shell"><h1>Check your sign-in</h1><p role="alert">{accessError}</p><button className="button" onClick={()=>setRetry(n=>n+1)}>Retry sign-in check</button><p><a href="/login">Request a new sign-in link</a></p></section></main>;
@@ -163,7 +168,7 @@ export default function DashboardPage() {
         <button onClick={handleLogout} className="button">
           Logout
         </button>
-        {errorMessage&&<p role="alert">{errorMessage}</p>}
+        {logoutError&&<p role="alert">{logoutError}</p>}
 
         {user && <Campaigns user={user} />}
         <details className="listening-links"><summary>Saved listening links (optional)</summary>
@@ -171,7 +176,7 @@ export default function DashboardPage() {
 
         {errorMessage && <div role="alert"><p>{errorMessage}</p><button type="button" onClick={() => fetchSongs(user.id).catch(() => setErrorMessage("Unable to load songs. Please retry."))}>Reload songs</button></div>}
         {notice && <p role="status">{notice}</p>}
-        <form onSubmit={handleSubmit} aria-label="Song details">
+        {!songsUnavailable&&<><form onSubmit={handleSubmit} aria-label="Song details">
           <input
             type="text"
             aria-label="Song title"
@@ -233,7 +238,7 @@ export default function DashboardPage() {
               <button type="button" className="button" disabled={saving} onClick={() => editSong(song)}>Edit song</button>
             </div>
           ))
-        )}
+        )}</>}
         </details>
       </section>
     </main>
