@@ -1,5 +1,7 @@
 # Platform follow-ups — 1 November 2026
 
+**Meta chat update — 1 November:** Owner returned the chat ready for a reply; the prior terms gate was no longer displayed. Sent an authorized clarification that selecting Verification/App Review leaves the dashboard unchanged without an error, and asked for an actionable support route, visibility and case reference. Meta AI explicitly stated it cannot escalate to a live agent and that no support case or ticket was created in this chat. It suggested the Developer Bug Tool; its visibility/security descriptions are AI guidance, not independently verified platform guarantees. No bug report or public post was submitted. Customer approval remains unconfirmed.
+
 **Meta update — 1 November:** Business Help recovered. Prepared the developer-verification question in its AI business assistant, which paused at Start using Meta AI. Continue explicitly accepts Beta/Privacy/Meta AI/Supplemental terms and was left untouched for Dr Paul. No human-support delivery, response or case creation is confirmed. Earlier timeout remains historical evidence.
 
 **Delivery update — 1 November:** Dr Paul confirms TikTok received the support form after the earlier CAPTCHA block. Receipt is owner-confirmed; no independent success screen, case number, reviewer response or approval was inspected in this update. This supersedes the earlier unconfirmed delivery state below.
