@@ -1,11 +1,13 @@
 # Platform follow-ups — 1 November 2026
 
+**Delivery update — 1 November:** Dr Paul confirms TikTok received the support form after the earlier CAPTCHA block. Receipt is owner-confirmed; no independent success screen, case number, reviewer response or approval was inspected in this update. This supersedes the earlier unconfirmed delivery state below.
+
 Dr Paul authorized reminders to platforms delaying verification. Contact only verified platform support channels; never guess email addresses, expose credentials, recall a pending review or change scopes merely to request a status update.
 
 | Platform | Action and verified result | Next step |
 |---|---|---|
 | Google | Sent an Auth Platform UI feedback report from Verification Center for project my-music-promotion-secretary. Google displayed Thanks for your feedback! No case number, review approval or guaranteed personal reply was shown. | Check for response or repaired branding control. |
-| TikTok | Prepared app-specific Content Posting API support form and clicked Submit. A puzzle CAPTCHA appeared; no success confirmation was obtained. Delivery remains unconfirmed. Existing review still says In review with high-volume delay notice. | Owner completes CAPTCHA in the open support tab, then verify the success state. Do not duplicate-submit while outcome is uncertain. |
+| TikTok | Dr Paul confirmed receipt of the support form on 1 November, following the earlier CAPTCHA block. No case number or approval was independently inspected. Last portal review state remains In review with a high-volume delay notice. | Await support response and check review status; avoid a duplicate reminder immediately after confirmed receipt. |
 | Meta | Developer Help led to AI/self-service/public routes. Private Business Help navigation timed out, and its page could not be read afterward. No reminder was sent and no public forum post or new AI-terms agreement was made. | Retry the private support route when accessible; use the prepared text below. |
 
 Connected Gmail searches found no matching recent app-review/support threads. This does not establish that no correspondence exists in another mailbox. No email was sent to a guessed address.
