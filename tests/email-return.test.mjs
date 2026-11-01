@@ -8,7 +8,7 @@ test('ordinary home visits do not check or redirect existing sessions',async()=>
 test('invitation waits for persisted session initialization before verifying the user',async()=>{
  let release;const events=[];const initialized=new Promise(r=>release=r);
  const result=emailReturnDestination({async getSession(){events.push('initializing');await initialized;return {data:{session:{}}};},async getUser(){events.push('verified');return {data:{user:{id:'test-user'}}};}},returned);
- assert.deepEqual(events,['initializing']);release();assert.equal(await result,'/dashboard');assert.deepEqual(events,['initializing','verified']);
+ await Promise.resolve();assert.deepEqual(events,['initializing']);release();assert.equal(await result,'/dashboard');assert.deepEqual(events,['initializing','verified']);
 });
 test('missing or unverified sessions never enter the dashboard',async()=>{
  for(const auth of [null,{getSession:async()=>({data:{session:null}})},{getSession:async()=>({data:{session:{}}}),getUser:async()=>({data:{user:null},error:Error('invalid')})},{getSession:async()=>{throw Error('offline');}}])assert.equal(await emailReturnDestination(auth,returned),'/login?notice=link');

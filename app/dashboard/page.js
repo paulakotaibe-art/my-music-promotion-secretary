@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import Campaigns from "./Campaigns";
 import {ENROLMENT_INTENT_KEY,readEnrolmentIntent} from "../../lib/enrolment.mjs";
+import {withDeadline} from '../../lib/deadline.mjs';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function DashboardPage() {
   const [songs, setSongs] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [accessError, setAccessError] = useState('');
+  const [retry, setRetry] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [notice, setNotice] = useState("");
   const [editingId, setEditingId] = useState(null);
@@ -37,7 +40,10 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    let active=true;
     const protectDashboard = async () => {
+      setLoading(true);setAccessError('');
+      try {
       if(new URLSearchParams(window.location.hash.slice(1)).has('error')){router.replace('/login?notice=link');return;}
       if (!supabase) {
         router.push("/login");
@@ -47,7 +53,8 @@ export default function DashboardPage() {
       const {
         data: { user },
         error,
-      } = await supabase.auth.getUser();
+      } = await withDeadline(()=>supabase.auth.getUser(),8000,'Sign-in check timed out. Check your connection and retry.');
+      if(!active)return;
 
       if (error || !user) {
         router.push("/login");
@@ -61,16 +68,21 @@ export default function DashboardPage() {
       } catch {}
       setUser(user);
       try {
-        await fetchSongs(user.id);
+        await withDeadline(()=>fetchSongs(user.id),12000,'Song loading timed out.');
       } catch {
         setErrorMessage("Unable to load songs. Check your connection and retry.");
       } finally {
-        setLoading(false);
+        if(active)setLoading(false);
+      }
+      }catch{
+        if(active){setAccessError('We could not verify your sign-in. Check your connection and retry, or request a fresh sign-in link.');setLoading(false);}
       }
     };
 
     protectDashboard();
-  }, [router]);
+    return()=>{active=false;};
+  }, [router,retry]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -122,22 +134,27 @@ export default function DashboardPage() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    try{
+      const {error}=await withDeadline(()=>supabase.auth.signOut(),8000,'Sign-out timed out.');
+      if(error)throw error;
+      setUser(null);setSongs([]);setLoading(true);router.replace('/login');
+    }catch{setErrorMessage('Sign-out could not be confirmed. Check your connection and try again.');}
   };
+
+  if(accessError)return <main id="main-content" tabIndex={-1} className="container studio-ui"><section className="hero dashboard-shell"><h1>Check your sign-in</h1><p role="alert">{accessError}</p><button className="button" onClick={()=>setRetry(n=>n+1)}>Retry sign-in check</button><p><a href="/login">Request a new sign-in link</a></p></section></main>;
 
   if (loading) {
     return (
-      <main className="container studio-ui">
+      <main id="main-content" tabIndex={-1} className="container studio-ui">
         <section className="hero dashboard-shell">
-          <h1>Loading dashboard...</h1>
+          <h1>Loading dashboard...</h1><p role="status">Checking your sign-in.</p>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="container studio-ui">
+    <main id="main-content" tabIndex={-1} className="container studio-ui">
       <section className="hero dashboard-shell">
         <header className="studio-header"><div><span className="studio-eyebrow">MUSIC PROMOTION SECRETARY</span><h1>Your music. Your next move.</h1><p>Create a release, choose your audience, and watch your promotion take shape.</p></div><a className="studio-nav" href="/help">Help &amp; publishing guide →</a></header><div className="studio-workflow"><a href="#campaign-heading">01 · Create your post</a><span>02 · Review your release</span><span>03 · Publish &amp; track</span></div>
 
@@ -146,6 +163,7 @@ export default function DashboardPage() {
         <button onClick={handleLogout} className="button">
           Logout
         </button>
+        {errorMessage&&<p role="alert">{errorMessage}</p>}
 
         {user && <Campaigns user={user} />}
         <details className="listening-links"><summary>Saved listening links (optional)</summary>

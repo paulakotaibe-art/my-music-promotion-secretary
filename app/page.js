@@ -1,7 +1,7 @@
 import HomeEmailReturn from './components/HomeEmailReturn';
 export default function Home() {
   return (
-    <main className="container">
+    <main id="main-content" tabIndex={-1} className="container">
       <HomeEmailReturn><section className="hero">
         <h1>My Music Promotion Secretary</h1>
 

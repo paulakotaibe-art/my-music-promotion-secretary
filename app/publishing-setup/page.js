@@ -13,7 +13,7 @@ export default function PublishingSetup(){
  async function load(){setBusy(true);setMessage('');try{setSetup(await request('/api/publishing/setup'));}catch(e){setMessage(e.message);}finally{setBusy(false);}}
  useEffect(()=>{load().then(()=>{const result=new URLSearchParams(window.location.search).get('youtube');if(result==='failed')setMessage('Google authorization did not finish. Check the client settings, test user and both permissions, then retry.');if(result==='connected')setMessage('YouTube authorization was saved. Check the channel below. Direct publishing is not enabled yet.');});},[]);
  async function connect(){setBusy(true);setMessage('');try{const data=await request('/api/integrations/youtube/connect','POST');window.location.assign(data.url);}catch(e){setMessage(e.message);setBusy(false);}}
- return <main className="container"><section className="hero"><h1>Owner: direct publishing setup</h1>
+ return <main id="main-content" tabIndex={-1} className="container"><section className="hero"><h1>Owner: direct publishing setup</h1>
  <p>Start with the YouTube connection. The owner upload pilot is available below. A connected account does not mean subscriber publishing is ready.</p>
  {message&&<p role="alert">{message}</p>}
  <button className="button" disabled={busy} onClick={load}>{busy?'Checking…':'Refresh setup status'}</button>

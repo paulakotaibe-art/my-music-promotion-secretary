@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --test tests/*.test.mjs",
+    "test:billing:local": "node scripts/test-billing-local.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.45.4",
@@ -14,5 +16,8 @@
     "react-dom": "18.3.1",
     "stripe": "^18.3.0",
     "tus-js-client": "4.3.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.14"
   }
 }

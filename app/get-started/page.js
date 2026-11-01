@@ -1,17 +1,18 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {supabase} from '../../lib/supabaseClient';
+import {accountSession} from '../../lib/account-session.mjs';
 export default function GetStarted(){
  const[data,setData]=useState(null),[billing,setBilling]=useState(null),[busy,setBusy]=useState(true),[message,setMessage]=useState(''),[signedIn,setSignedIn]=useState(false);
  async function load(){setBusy(true);setMessage('');setData(null);try{
  if(!supabase)throw Error('Account access is temporarily unavailable.');
- const {data:{session}}=await supabase.auth.getSession();setSignedIn(!!session);if(!session){setMessage('Sign in to see your personal setup progress.');return;}
+ const session=await accountSession(supabase?.auth);setSignedIn(!!session);if(!session){setMessage('Sign in to see your personal setup progress.');return;}
  const [readiness,status]=await Promise.all([fetch('/api/publishing/readiness',{headers:{Authorization:'Bearer '+session.access_token},cache:'no-store',signal:AbortSignal.timeout(15000)}),fetch('/api/billing/status',{cache:'no-store',signal:AbortSignal.timeout(15000)})]);
  const [r,b]=await Promise.all([readiness.json(),status.json()]);if(!readiness.ok)throw Error(r.message||'Unable to check your account.');setData(r);setBilling(b);
  }catch(e){setMessage(e.message||'Please try again later.');}finally{setBusy(false);}}
  useEffect(()=>{load();},[]);
  const ready=data?.channels.filter(c=>c.ready||c.privateTestAvailable)||[];
- return <main className="container studio-ui"><section className="hero dashboard-shell"><header className="studio-header"><div><span className="studio-eyebrow">ARTIST ACCOUNT SETUP</span><h1>Your next step is clear.</h1><p>Check your access, connect your own accounts, then prepare your first release.</p></div><a href="/dashboard">Dashboard →</a></header>
+ return <main id="main-content" tabIndex={-1} className="container studio-ui"><section className="hero dashboard-shell"><header className="studio-header"><div><span className="studio-eyebrow">ARTIST ACCOUNT SETUP</span><h1>Your next step is clear.</h1><p>Check your access, connect your own accounts, then prepare your first release.</p></div><a href="/dashboard">Dashboard →</a></header>
  {message&&<p role="status" className="activity-message">{message}</p>}{busy&&<p role="status">Checking your setup…</p>}
  {!busy&&!signedIn&&<p><a className="button" href="/login?next=%2Fget-started">Sign in</a> · <a href="/join">Register</a></p>}
  {data&&<><section className={'activity-panel '+(ready.length?'activity-ready':'activity-waiting')}><strong>{data.owner?'Your owner access is separate from subscriptions':ready.length?'Your available publishing studios':'Customer publishing is still in preparation'}</strong><p>{data.allowanceText}</p>{!data.owner&&!billing?.paidLaunchOpen&&<p>Paid enrolment is closed. Connecting an account does not charge you or activate publishing.</p>}</section>
