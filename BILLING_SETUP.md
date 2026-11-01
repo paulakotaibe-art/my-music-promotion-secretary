@@ -44,3 +44,26 @@ The owner test setup reports the exact failing stage using sanitized Stripe code
 ### In-app subscription management
 
 The dashboard Manage subscription button loads Stripe subscription details inside the app, with visible loading, focused errors and an explicit Yes, cancel renewal confirmation. The authenticated cancellation endpoint validates customer, app-user metadata and test/live mode before setting cancel_at_period_end=true. It does not refund or terminate access immediately. Stripe webhooks persist the renewal-cancellation flag in the subscription record. This flow does not depend on the optional Stripe customer portal; cancellation still requires an end-to-end owner test before launch.
+
+## Acceptance work remaining — 1 November 2026
+
+This is a test plan, not a completion claim. Current isolated TikTok Sandbox intentionally disables billing; do not add billing credentials or remove its isolation guard to run these checks. Use a separately identified, isolated test deployment and test database with outbound publishing disabled. Never run the transactional SQL suite against production merely because it ends in ROLLBACK: it temporarily changes launch/configuration and role claims. Identify the target before execution.
+
+Fresh source verification on 1 November: eight focused Node tests passed from this branch (billing-mode, billing-setup, plans and subscription-access). These use fixtures/mocks, not Stripe checkout, webhook delivery, deployed database acceptance or public publishing. The earlier full-suite/build record remains 30 October; it was not rerun for this documentation update.
+
+| Check | Required evidence / acceptance | Current state |
+|---|---|---|
+| Test checkout and cancellation baseline | Preserve the historical 23 October signed-webhook and end-of-period cancellation result; repeat on the named launch candidate before acceptance | Historical result only; see LAUNCH_VERIFICATION.md |
+| Failed payment and recovery | Test-mode failure changes saved entitlement; subsequent paid invoice/current subscription restores only the correct plan and term | Deployment acceptance outstanding |
+| Expiry, cancellation and renewal | Period boundary removes access; cancel renewal retains access only through the paid term; renewal extends the term exactly once | Deployment acceptance outstanding |
+| Duplicate and delayed events | Re-deliver the same test event and deliver an older event after cancellation; current Stripe state and persisted entitlement stay consistent | Webhook code reads current state; end-to-end result outstanding |
+| Ownership and mode | A different user/customer cannot manage the subscription; test subscription cannot grant live allowance | Focused ownership/mode tests passed; deployed acceptance outstanding |
+| Concurrent final-credit claims | Two independent sessions race for one remaining credit against an isolated database; one succeeds, the other is denied; one ledger reservation remains | Existing single-transaction tests do not establish concurrent-session behavior |
+| Queue and publication week | Each tier reaches its independent queue cap across legal weeks; London week/DST and term boundary remain correct | Historical rollback-suite record; repeat against launch schema outstanding |
+| Cross-platform accounting | One campaign targeting three networks consumes one promotion; unrelated drafts remain independent; channel/artist binding cannot be changed to bypass limits | Full customer integration outstanding; provider submission requires separate authorization |
+| Uncertain provider outcome | Simulated timeout keeps the original reservation; refresh/status recovery does not submit again or restore a credit without authoritative rejection | Use local provider stubs only for preparation; actual platform acceptance separate |
+| Schedule changes and cancellation | Reschedule across weeks checks the destination allowance and term; cancellation follows the actual provider result and adjusts the ledger once | Customer integration outstanding; do not modify existing live schedules |
+
+For each executed scenario, record date, source commit, deployment/database identity, test/live mode, sanitized fixture or event ID, before/after subscription and ledger state, expected versus actual result, and confirmation that no live charge or media submission occurred. Do not store tokens, card details or signing secrets. A failing or unexecuted scenario keeps PROJECT_COMPLETION milestones 22 and 23 open.
+
+Next safe execution order: identify an eligible isolated billing test environment; inspect its configuration without exposing values; run fixture-only local checks; execute database/provider-stub integration there; then perform authorized Stripe test checkout/webhook lifecycle. Real customer publishing and final production release remain separate gates.
