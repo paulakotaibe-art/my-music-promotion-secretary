@@ -1,5 +1,7 @@
 # Platform follow-ups — 1 November 2026
 
+**Meta update — 1 November:** Business Help recovered. Prepared the developer-verification question in its AI business assistant, which paused at Start using Meta AI. Continue explicitly accepts Beta/Privacy/Meta AI/Supplemental terms and was left untouched for Dr Paul. No human-support delivery, response or case creation is confirmed. Earlier timeout remains historical evidence.
+
 **Delivery update — 1 November:** Dr Paul confirms TikTok received the support form after the earlier CAPTCHA block. Receipt is owner-confirmed; no independent success screen, case number, reviewer response or approval was inspected in this update. This supersedes the earlier unconfirmed delivery state below.
 
 Dr Paul authorized reminders to platforms delaying verification. Contact only verified platform support channels; never guess email addresses, expose credentials, recall a pending review or change scopes merely to request a status update.
