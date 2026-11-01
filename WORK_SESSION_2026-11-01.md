@@ -27,3 +27,12 @@ This is evidence for database dependency ordering and tenant-scoped connection r
 Master milestones 22–25 remain open until their full deployed/customer acceptance checks pass; master progress remains 16 achieved of 30. Next work is external Stripe test delivery in an eligible isolated billing deployment, actual parallel-session allowance claims, real browser expiry/account-switch recovery and the remaining support/storage/revocation exercise. No new paid service or database branch was created during this session. Provider approvals remain separate.
 
 The local runner is reusable without a database URL or provider credentials. It must not be described as a deployed billing environment or successful public customer publishing.
+
+## Later deployment and build-work update
+The implementation was saved as d342345475007c2443b39295ccd70d2769928eb6. GitHub's Sandbox deployment check failed with target https://vercel.com/paulakotaibe-2592s-projects?upgradeToPro=build-rate-limit . No upgrade was purchased. The subscription fix is not deployed.
+
+Prepared a conservative documentation-build skip command using VERCEL_GIT_PREVIOUS_SHA and VERCEL_GIT_COMMIT_SHA. It permits skipping only root Markdown changes since the last successful deployment. Runtime/config/test changes, unavailable history and missing variables all require a build. Three actual temporary-Git-repository checks cover documentation-only changes, an undeployed code change followed by documentation, and missing history. Full suite is now **135 passed**. The configuration instance validates against the official Vercel schema.
+
+This is a reduction in unnecessary build work, not a quota bypass or guarantee of fewer counted deployment attempts. Platform execution remains unverified while deployment is blocked. Existing isolation guards are unchanged.
+
+References: https://vercel.com/docs/project-configuration/vercel-json#ignorecommand and https://github.com/vercel/vercel/discussions/7251 .
