@@ -1,3 +1,4 @@
+import {sandboxYouTubeReceipt} from '../../../../lib/youtube-submission-status.mjs';
 import {scheduleAndConfirm} from "../../../../lib/schedule-confirmation.mjs";
 import {usage,bridge} from "../../../../lib/billing";
 import {randomUUID} from "node:crypto";
@@ -20,7 +21,14 @@ export async function GET(request) {
   try {auth=await authenticate((request.headers.get("authorization") || "").replace(/^Bearer /,""));}catch{return reply({message:"Please sign in again."},401);}
   const {data,error}=await auth.client.from("campaign_submissions").select("*").eq("user_id",auth.user.id).order("created_at",{ascending:false}).limit(50);
   if(error) return reply({message:"Unable to load submissions."},503);
+  const privateIds=data.filter(row=>row.snapshot?.provider==='sandbox_youtube_private').map(row=>row.id);
+  let privateUploads=[];
+  if(privateIds.length){
+    const result=await auth.client.from('youtube_uploads').select('id,user_id,draft_id,channel_id,mode,outcome,outcome_signature').eq('user_id',auth.user.id).in('id',privateIds);
+    if(!result.error)privateUploads=result.data||[];
+  }
   return reply({submissions:data.map(row=>{
+    if(row.snapshot?.provider==='sandbox_youtube_private')return {id:row.id,draft_id:row.draft_id,title:row.snapshot.title,platforms:['youtube'],date:row.snapshot.planned_at,status:'unknown',...sandboxYouTubeReceipt(row,privateUploads.find(u=>u.id===row.id),verifyResult)};
     const valid=row.evidence && verifyResult(row.evidence,row.evidence_signature) && row.evidence.id===row.id && row.evidence.userId===auth.user.id;
     const legacy=valid && row.evidence.status==="accepted" && !Array.isArray(row.evidence.confirmedPlatforms);
     if(row.snapshot.provider==='direct_facebook')return {id:row.id,draft_id:row.draft_id,title:row.snapshot.title,platforms:row.snapshot.platforms,date:row.snapshot.planned_at,status:'unknown',direct:true,directPlatform:'Facebook',released:row.quota_released,message:'Facebook publication reserved. Open your Facebook studio to check processing, schedule and actual publication.',directUrl:'/facebook'};

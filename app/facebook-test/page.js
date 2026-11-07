@@ -35,7 +35,7 @@ export default function FacebookStudio(){
  }
  const eligible=data?.uploads?.filter(u=>u.canRelease||u.canSchedule)||[];
  const formatDate=value=>new Date(value).toLocaleString(undefined,{dateStyle:'full',timeStyle:'long'});
- return <main className="container studio-ui"><section className="hero dashboard-shell">
+ return <main id="main-content" tabIndex={-1} className="container studio-ui"><section className="hero dashboard-shell">
  <header className="studio-header"><div><span className="studio-eyebrow">FACEBOOK · PUBLISHING STUDIO</span><h1>Your Facebook publishing studio</h1><p>Upload once. Review your video. Publish now or choose a release time.</p></div><a href="/dashboard">← Dashboard</a></header>
  <section className="activity-panel activity-waiting"><strong>{data?.owner?'Owner publishing pilot':'Your Facebook publishing'}</strong><p>Each new video starts with an unpublished upload. Once processing is verified, release the same video without uploading another copy.</p><p>Unpublished does not mean private. {data?.owner?'Owner releases use no subscriber allowance.':'Publishing requires approved access and an available promotion allowance.'}</p></section>
  {message&&<p role="status" className="activity-message">{message}</p>}

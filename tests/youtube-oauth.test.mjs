@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {youtubeAuthorization,checkYouTubeState,checkYouTubeUser,exchangeYouTube,YOUTUBE_CALLBACK,YOUTUBE_SCOPES} from '../lib/youtube-oauth.mjs';
+import {youtubeAuthorization,checkYouTubeState,checkYouTubeUser,exchangeYouTube,youtubeConfig,youtubeConfigured,YOUTUBE_CALLBACK,YOUTUBE_SCOPES} from '../lib/youtube-oauth.mjs';
 const env={YOUTUBE_CLIENT_ID:'client',YOUTUBE_CLIENT_SECRET:'secret'};
 test('YouTube consent binds app user and fixed callback without exposing a client secret',()=>{
  const a=youtubeAuthorization('user','session',env),b=youtubeAuthorization('user','session',env),url=new URL(a.url);
@@ -24,4 +24,12 @@ test('connection callback rejects a different app account and allows ordinary au
  assert.throws(()=>checkYouTubeUser({userId:'subscriber-a'},{id:'subscriber-b'}));
  assert.throws(()=>checkYouTubeUser({userId:'subscriber-a'},null));
  assert.throws(()=>checkYouTubeUser({},{}));
+});
+
+test('Sandbox YouTube credentials never fall back to production credentials',()=>{
+ const sandbox={MUSIC_APP_ENV:'sandbox',YOUTUBE_SANDBOX_CLIENT_ID:'test-client',YOUTUBE_SANDBOX_CLIENT_SECRET:'test-secret',...env};
+ assert.deepEqual(youtubeConfig(sandbox),{clientId:'test-client',clientSecret:'test-secret'});
+ assert.equal(youtubeConfigured({MUSIC_APP_ENV:'sandbox',...env}),false);
+ assert.equal(youtubeConfigured({YOUTUBE_SANDBOX_CLIENT_ID:'test',YOUTUBE_SANDBOX_CLIENT_SECRET:'test'}),false);
+ assert.equal(new URL(youtubeAuthorization('user','session',sandbox).url).searchParams.get('client_id'),'test-client');
 });
