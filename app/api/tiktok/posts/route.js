@@ -13,7 +13,13 @@ export async function GET(request){
 export async function POST(request){
  let auth;try{auth=await billingAuth(request,true);}catch{return json({message:'Please sign in from the app.'},401);}let reserved=false;
  try{const raw=await request.text();if(raw.length>16000)throw Error('Invalid request.');const b=JSON.parse(raw);
-  if(['cancel','check'].includes(b.action)){const {data,error}=await auth.client.rpc('control_tiktok_post',{p_id:b.id,p_action:b.action});if(error||!data)throw Error('That action is unavailable. Refresh the result first.');return json({message:b.action==='cancel'?'Schedule cancelled before submission. Any subscriber reservation has been released.':'A status check is queued. This will not submit another video.'});}
+  if(b.action==='check'){
+   const {data:job,error}=await auth.client.rpc('claim_tiktok_check',{p_id:b.id});
+   if(error||!job||job.statusOnly!==true)throw Error('That status check is unavailable. Refresh the result first.');
+   const result=await runTiktokJob(auth.client,job);
+   return json({message:result.verified?(result.state==='nonpublic'?'TikTok confirmed your private post is complete.':'TikTok confirmed your public post.') : result.saved?'TikTok has not confirmed completion yet. The latest check is shown below.':'The result could not be saved. Refresh before checking again.'});
+  }
+  if(b.action==='cancel'){const {data,error}=await auth.client.rpc('control_tiktok_post',{p_id:b.id,p_action:'cancel'});if(error||!data)throw Error('That action is unavailable. Refresh the result first.');return json({message:'Schedule cancelled before submission. Any subscriber reservation has been released.'});}
   await tiktokAccess(auth,true);const e=b.expected;if(!e||e.userId!==auth.user.id||!verifyResult(e,b.signature)||!Number.isFinite(Date.parse(e.reviewedAt))||Date.parse(e.reviewedAt)<Date.now()-600000||Date.parse(e.reviewedAt)>Date.now()+60000)throw Error('Review this post again before publishing.');
   const {data,error}=await auth.client.rpc('reserve_tiktok_post',{p_id:e.id,p_draft:e.draftId,p_expected:e,p_signature:signResult(e)});if(error||!data)throw Error('No TikTok request was sent. Refresh your allowance, date and previous post result, then review again.');reserved=true;
   if(e.publishAt)return json({message:'Saved in your app schedule. You can close the app. TikTok processing and moderation can delay visibility after the scheduled submission time.'});

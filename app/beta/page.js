@@ -1,6 +1,6 @@
 export default function BetaPage() {
   return (
-    <main className="container">
+    <main id="main-content" tabIndex={-1} className="container">
       <section className="hero">
         <h1>My Music Promotion Secretary Beta A</h1>
 

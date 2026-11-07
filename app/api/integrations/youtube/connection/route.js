@@ -1,3 +1,4 @@
+import {youtubeConfigured} from '../../../../../lib/youtube-oauth.mjs';
 import {billingAuth,json} from '../../../../../lib/billing';
 export const dynamic='force-dynamic';
 export async function GET(request){
@@ -5,6 +6,6 @@ export async function GET(request){
  try{
  const {data,error}=await auth.client.from('youtube_connections').select('channel_id,channel_title,connected_at').eq('user_id',auth.user.id).maybeSingle();
  if(error)throw error;
- return json({connection:data || null,available:Boolean(process.env.YOUTUBE_CLIENT_ID?.trim() && process.env.YOUTUBE_CLIENT_SECRET?.trim())});
+ return json({connection:data || null,available:youtubeConfigured()});
  }catch{return json({message:'Unable to load your channel. Please retry.'},503);}
 }

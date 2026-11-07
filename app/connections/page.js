@@ -1,10 +1,11 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {supabase} from '../../lib/supabaseClient';
+import {accountSession} from '../../lib/account-session.mjs';
 export default function Connections(){
  const [data,setData]=useState(null),[busy,setBusy]=useState(true),[error,setError]=useState(''),[result,setResult]=useState('');
  async function api(path,method='GET'){
- const {data:{session}}=await supabase.auth.getSession();
+ const session=await accountSession(supabase?.auth);
  if(!session){window.location.assign('/login');throw Error('Please sign in, then open Connected channels.');}
  const r=await fetch(path,{method,headers:{Authorization:'Bearer '+session.access_token},cache:'no-store',signal:AbortSignal.timeout(20000)});
  const d=await r.json();if(!r.ok)throw Error(d.message || 'Please try again.');return d;
@@ -12,7 +13,7 @@ export default function Connections(){
  async function load(){setBusy(true);setError('');try{setData(await api('/api/integrations/youtube/connection'));}catch(e){setError(e.message);}finally{setBusy(false);}}
  useEffect(()=>{const q=new URL(window.location.href),r=q.searchParams.get('youtube');if(r)setResult(r);q.searchParams.delete('youtube');window.history.replaceState(null,'',q.pathname+q.search+q.hash);load();},[]);
  async function connect(){if(busy)return;setBusy(true);setError('');try{const d=await api('/api/integrations/youtube/connect','POST');const url=new URL(d.url);if(url.origin!=='https://accounts.google.com' || url.pathname!=='/o/oauth2/v2/auth')throw Error('Unable to open secure Google sign-in.');window.location.assign(url.href);}catch(e){setError(e.message);setBusy(false);}}
- return <main className="container studio-ui"><section className="hero dashboard-shell"><header className="studio-header"><div><span className="studio-eyebrow">YOUR CONNECTED CHANNELS</span><h1>Connect your YouTube.</h1><p>Choose the Google account that manages your channel. No API keys or technical setup needed.</p></div><a className="studio-nav" href="/dashboard">← Dashboard</a></header>
+ return <main id="main-content" tabIndex={-1} className="container studio-ui"><section className="hero dashboard-shell"><header className="studio-header"><div><span className="studio-eyebrow">YOUR CONNECTED CHANNELS</span><h1>Connect your YouTube.</h1><p>Choose the Google account that manages your channel. No API keys or technical setup needed.</p></div><a className="studio-nav" href="/dashboard">← Dashboard</a></header>
  {error&&<p className="publish-error" role="alert">{error}</p>}
  {result==='failed'&&<p className="publish-error" role="alert">The connection was not completed. Your previous saved channel, if any, has been kept. Try again and allow both requested YouTube permissions. If Google says access is restricted to testers, contact the app owner.</p>}
  {result==='connected'&&data?.connection&&<p className="activity-message activity-ready" role="status">Your YouTube channel is connected. Check its name below.</p>}
