@@ -4,7 +4,8 @@ import AccountSessionBoundary from './components/AccountSessionBoundary';
 
 export const metadata = {
   title: "Music Promotion Secretary",
-  description: "Promote your music with smart support and simple tools."
+  description: "Prepare original videos, connect your accounts, review publishing settings and track your music promotion.",
+  icons: {icon: [{url:'/favicon.png',type:'image/png',sizes:'48x48'},{url:'/music-promotion-secretary-icon.svg',type:'image/svg+xml'}],apple:'/music-promotion-secretary-icon.png'}
 };
 
 export default function RootLayout({ children }) {

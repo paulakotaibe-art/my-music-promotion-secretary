@@ -1,26 +1,17 @@
 import HomeEmailReturn from './components/HomeEmailReturn';
+import PostPlanner from './components/PostPlanner';
+
 export default function Home() {
-  return (
-    <main id="main-content" tabIndex={-1} className="container">
-      <HomeEmailReturn><section className="hero">
-        <h1>My Music Promotion Secretary</h1>
-
-        <p>
-          A smart SaaS platform helping artists upload songs successfully,
-          manage music promotion, prepare campaigns, and automate their music
-          marketing.
-        </p>
-
-        <a className="button" href="/join">
-          Register as an artist
-        </a>
-
-        <p><a href="/login">Already registered? Sign in</a> · <a href="/pricing">View plans</a></p>
-
-        <a className="button" href="/dashboard">
-          Go to Dashboard
-        </a>
-      </section></HomeEmailReturn>
-    </main>
-  );
+ return <main id="main-content" tabIndex={-1} className="music-home">
+  <header className="music-home-header"><a href="/" className="music-brand"><img src="/music-promotion-secretary-icon.png" width="64" height="64" alt="My Music Promotion Secretary app icon"/><span>My Music<br/>Promotion Secretary</span></a><nav aria-label="Main"><a href="#workflow">How it works</a><a href="#planner">Plan a post</a><a href="/help">Help</a><a href="/login">Sign in</a></nav></header>
+  <HomeEmailReturn><section className="music-intro"><p className="music-kicker">YOUR MUSIC. YOUR NEXT MOVE.</p><h1>Prepare your release.<br/><span>Make every post your own.</span></h1><p>A workspace for independent artists to upload original media, prepare captions and review posts for their connected social accounts.</p><div className="music-actions"><a className="button" href="/dashboard">Open your workspace</a><a href="#planner">Try the post planner below ↓</a></div><p className="music-small">Customer publishing is being verified. This review environment supports authorised private tests; public TikTok posting and billing remain unavailable.</p></section></HomeEmailReturn>
+  <section id="workflow" className="music-section"><p className="music-kicker">FROM MEDIA TO A REVIEWED POST</p><h2>You choose the content and the destination.</h2><div className="music-steps">
+   <article><span>01</span><h3>Upload & prepare</h3><p>Sign in to upload your own media, add a title and write an editable caption. Save a draft before publishing.</p><a href="/dashboard">Media workspace →</a></article>
+   <article><span>02</span><h3>Connect & choose</h3><p>Connect the account you manage. In the TikTok studio, choose a saved video and select visibility from the options TikTok provides for that account.</p><a href="/social-connections">Account connections →</a></article>
+   <article><span>03</span><h3>Review & confirm</h3><p>Check the preview, caption, interaction settings, disclosures and music permissions. Review the final post before confirming a submission.</p><a href="/tiktok">TikTok studio →</a></article>
+   <article><span>04</span><h3>Track the result</h3><p>See processing, completion or failure status. A queued item is not proof of publication. Public availability depends on each platform’s approval.</p><a href="/publishing-status">Publishing availability →</a></article>
+  </div></section>
+  <PostPlanner/>
+  <section className="music-section music-help"><div><h2>Help for artists and reviewers</h2><p>The planner above works without signing in. Protected account connections, uploaded media and actual submissions require an authorised test account.</p><p>Sign-in uses a secure email link; it does not use a password. Existing testers can sign in with their registered address. New customer registration is closed during verification.</p><a href="/login">Existing tester sign-in →</a></div><div><h3>Support & your information</h3><ul><li><a href="/help">Using the app</a></li><li><a href="/support">Contact support</a></li><li><a href="/privacy">Privacy policy</a></li><li><a href="/terms">Terms of service</a></li><li><a href="/data-deletion">Delete your data or revoke access</a></li></ul><p className="music-small">YouTube, Facebook and TikTok are separate services. Connection or a private test does not establish approval for public customer publishing.</p></div></section>
+ </main>;
 }
