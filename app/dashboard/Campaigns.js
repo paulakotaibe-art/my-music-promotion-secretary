@@ -71,6 +71,7 @@ export default function Campaigns({user}){
   try{
    setStage("Saving your post…");
    const id=await persist(true);
+   if(form.platforms.length===1 && form.platforms[0]==="facebook" && form.media_kind==="video"){window.location.assign("/facebook?draft="+encodeURIComponent(id));return;}
    setStage("Checking your social accounts…");
    const result=await api("/api/publishing/schedule",{action:"preview",draftId:id,brandId:brandId || undefined,publishNow:timing==="now",madeForKids:kids==="" ? undefined:kids==="yes",tiktokPrivacy:privacy,ownBrand,thirdParty,rightsConfirmed:rights});
    setPreview(result);refresh().catch(()=>{});
@@ -97,8 +98,8 @@ export default function Campaigns({user}){
   <Usage at={timing==="later" && date && time && Number.isFinite(Date.parse(`${date}T${time}`)) ? new Date(`${date}T${time}`).toISOString() : undefined} refreshKey={historyKey}/>
   <h2 id="campaign-heading">Create your post</h2><p>Upload. Choose your platforms. Get ready, then publish.</p>
   {notice && <p className="activity-message activity-ready" role="status">{notice}</p>}
-  <details className="social-settings"><summary>Social accounts · one-time setup</summary><p>Authorize your social accounts once. We check them automatically when you prepare a post. Secure authorization opens our publishing partner; your passwords are never entered here.</p>
-   <button type="button" disabled={busy || uploading || !!preview} onClick={connect}>Connect or reconnect social accounts</button>
+  <details className="social-settings"><summary>Publishing connections</summary><p><a href="/social-connections">Direct Facebook and TikTok connections</a> · <a href="/connections">YouTube connection</a>. Facebook-only video posts continue in the Facebook studio for review and publication.</p><p>For the multi-platform scheduler, authorize Metricool once. We check them automatically when you prepare a post. Secure authorization opens our publishing partner; your passwords are never entered here.</p>
+   <button type="button" disabled={busy || uploading || !!preview} onClick={connect}>Connect or reconnect Metricool scheduler</button>
    {connection?.brands?.flatMap(b=>b.networks || []).map((n,i)=><span className="account-badge" key={i}>{networks[n.network] || n.network}: {n.connected ? "Connected":"Needs setup"}</span>)}
   </details>
   <form onSubmit={prepare}><fieldset disabled={busy || uploading || !!preview}><legend>Your post</legend>

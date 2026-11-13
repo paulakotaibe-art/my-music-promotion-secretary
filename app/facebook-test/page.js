@@ -9,7 +9,7 @@ export default function FacebookStudio(){
   const r=await fetch(path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),cache:'no-store',signal:AbortSignal.timeout(55000)});
   const d=await r.json();if(!r.ok)throw Error(d.message||'Unable to finish.');return d;
  }
- async function load(){setBusy(true);try{setData(await api());}catch(e){setMessage(e.message);}finally{setBusy(false);}}
+ async function load(){setBusy(true);try{const next=await api();setData(next);const requested=new URLSearchParams(window.location.search).get('draft');if(requested&&next.drafts?.some(d=>d.id===requested)){setDraft(requested);setMessage('Your saved video is selected below. Review it and confirm upload permission to prepare it on Facebook.');}}catch(e){setMessage(e.message);}finally{setBusy(false);}}
  useEffect(()=>{setZone(Intl.DateTimeFormat().resolvedOptions().timeZone);load();},[]);
  const waiting=data?.uploads?.some(u=>(u.liveVerified&&u.processingStatus==='processing')||u.release&&!['published','failed','published_early'].includes(u.release.state));
  useEffect(()=>{if(!waiting||busy)return;const timer=setTimeout(load,30000);return()=>clearTimeout(timer);},[waiting,busy,data]);
@@ -56,7 +56,7 @@ export default function FacebookStudio(){
  </form>:<p>Processed, unpublished videos with no release attempt appear here. Check your video status below.</p>}
  {releaseReview&&<section className="publish-review"><h3>Review your release</h3><p>{releaseReview.title}</p><p>Page: {data.page?.name}</p><p>{releaseReview.mode==='public'?'Public now: Facebook may show the video publicly as soon as the request is accepted.':'Scheduled public release: '+formatDate(releaseReview.publishAt)}</p>{releaseReview.allowance&&<p>{releaseReview.allowance.remaining} of {releaseReview.allowance.limit} promotions remaining for this release's allowance period before publication.</p>}<p>This releases the existing Facebook video. No new upload is created.</p><button className="button" disabled={busy} onClick={publish}>Publish</button></section>}
  </section>
- <details className="upload-panel"><summary>Prepare a new video</summary>
+ <details className="upload-panel" open={!!draftId}><summary>Prepare a new video</summary>
  <p>Use this only for a new video. Your existing video is listed below.</p>
  <form className="studio-form" onSubmit={e=>{e.preventDefault();setReview(true);}} onChange={()=>setReview(false)}>
  <p><label>Saved video<select required disabled={busy} value={draftId} onChange={e=>setDraft(e.target.value)}><option value="">Choose your MP4 video</option>{data.drafts.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select></label></p>
