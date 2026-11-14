@@ -1,0 +1,62 @@
+begin;
+do $$
+declare uid uuid:=gen_random_uuid();other_uid uuid:=gen_random_uuid();d uuid;f uuid;r uuid;u jsonb;blocked boolean;expiry timestamptz:=now()+interval '2 hours';
+begin
+ insert into auth.users(id,email,created_at)values(uid,uid||'@review.invalid',now()),(other_uid,other_uid||'@review.invalid',now());
+ update app_private.billing_config set subscriber_launch=false;
+ update app_private.facebook_rollout set enabled=false,meta_approved=false;
+ insert into app_private.facebook_reviewers(user_id,enabled,expires_at,promotion_limit)values(uid,true,expiry,2);
+ perform set_config('request.jwt.claim.sub',uid::text,true);
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',uid,'role','authenticated')::text,true);
+ u:=public.facebook_publishing_access();
+ if u->>'owner'<>'false' or u->>'reviewer'<>'true' or u->>'enabled'<>'true' then raise exception 'Reviewer access incorrect: %',u;end if;
+ if (public.promotion_usage()->>'canPublish')::boolean then raise exception 'General publishing gate widened';end if;
+ if (public.facebook_promotion_usage()->>'remaining')::int<>2 then raise exception 'Reviewer allowance incorrect';end if;
+ if has_table_privilege('authenticated','app_private.facebook_reviewers','INSERT,UPDATE,SELECT') or has_function_privilege('authenticated','app_private.facebook_review_usage(uuid,timestamptz)','EXECUTE') or has_function_privilege('anon','public.facebook_promotion_usage(timestamptz)','EXECUTE') then raise exception 'Reviewer privilege leak';end if;
+ insert into public.social_connections(user_id,provider,account_id,account_name,encrypted_connection)values(uid,'facebook','review-fixture','Review fixture','unused');
+ d:=gen_random_uuid();f:=gen_random_uuid();r:=gen_random_uuid();
+ insert into public.campaign_drafts(id,user_id,title,caption,platforms)values(d,uid,'Review 1','Caption',array['facebook']);
+ insert into public.facebook_uploads(id,user_id,draft_id,page_id,title,outcome)values(f,uid,d,'999300','Review 1','{"videoId":"999301"}');
+ insert into public.facebook_releases(id,user_id,upload_id,page_id,video_id,mode)values(r,uid,f,'999300','999301','public');
+ if (public.facebook_promotion_usage()->>'used')::int<>1 then raise exception 'Review reservation missing';end if;
+ d:=gen_random_uuid();f:=gen_random_uuid();r:=gen_random_uuid();
+ insert into public.campaign_drafts(id,user_id,title,caption,platforms)values(d,uid,'Review 2','Caption',array['facebook']);
+ insert into public.facebook_uploads(id,user_id,draft_id,page_id,title,outcome)values(f,uid,d,'999300','Review 2','{"videoId":"999302"}');
+ blocked:=false;begin
+ perform public.queue_facebook_release(r,f,expiry+interval '1 minute',jsonb_build_object('id',r,'uploadId',f,'userId',uid,'pageId','999300','videoId','999302','mode','scheduled','publishAt',expiry+interval '1 minute'),'fixture');
+ exception when raise_exception then blocked:=sqlerrm like '%review access period%';end;
+ if not blocked or exists(select 1 from public.facebook_releases where id=r) then raise exception 'Review expiry reservation failure';end if;
+ perform public.queue_facebook_release(r,f,now()+interval '30 minutes',jsonb_build_object('id',r,'uploadId',f,'userId',uid,'pageId','999300','videoId','999302','mode','scheduled','publishAt',now()+interval '30 minutes'),'fixture');
+ u:=public.facebook_promotion_usage();
+ if (u->>'used')::int<>2 or (u->>'canPublish')::boolean then raise exception 'Review limit failed: %',u;end if;
+ if not app_private.facebook_dispatch_allowed(uid,now()+interval '30 minutes') then raise exception 'Reserved review dispatch denied';end if;
+ if app_private.facebook_dispatch_allowed(uid,expiry+interval '1 minute') then raise exception 'Expired review dispatch allowed';end if;
+ d:=gen_random_uuid();f:=gen_random_uuid();
+ insert into public.campaign_drafts(id,user_id,title,caption,platforms)values(d,uid,'Review 3','Caption',array['facebook']);
+ blocked:=false;begin insert into public.facebook_uploads(id,user_id,draft_id,page_id,title)values(f,uid,d,'999300','Review 3');exception when raise_exception then blocked:=sqlerrm like '%review promotion allowance%';end;
+ if not blocked then raise exception 'Reviewer exceeded quota';end if;
+ blocked:=false;begin insert into public.campaign_submissions(id,user_id,draft_id,snapshot)values(gen_random_uuid(),uid,d,jsonb_build_object('provider','metricool','planned_at',now(),'brand_id','fixture'));exception when raise_exception then blocked:=sqlerrm like '%prepared for launch%';end;
+ if not blocked then raise exception 'Reviewer unlocked other publishing';end if;
+ update app_private.facebook_reviewers set enabled=false where user_id=uid;
+ if (public.facebook_publishing_access()->>'enabled')::boolean or app_private.facebook_dispatch_allowed(uid,now()+interval '30 minutes') then raise exception 'Reviewer revocation failed';end if;
+ update app_private.facebook_reviewers set enabled=true,expires_at=now()-interval '1 second' where user_id=uid;
+ if (public.facebook_publishing_access()->>'enabled')::boolean then raise exception 'Expired reviewer still enabled';end if;
+ update app_private.facebook_reviewers set expires_at=expiry where user_id=uid;
+ perform set_config('review_test.uid',uid::text,true);perform set_config('review_test.other',other_uid::text,true);
+end $$;
+set local role authenticated;
+do $$
+declare u jsonb;n int;blocked boolean:=false;
+begin
+ u:=public.facebook_promotion_usage();
+ if u->>'owner'<>'false' or u->>'reviewer'<>'true' then raise exception 'Authenticated review role failed';end if;
+ select count(*) into n from public.facebook_uploads where user_id<>auth.uid();if n<>0 then raise exception 'Cross-account upload leak';end if;
+ select count(*) into n from public.campaign_drafts where user_id<>auth.uid();if n<>0 then raise exception 'Cross-account draft leak';end if;
+ begin update app_private.facebook_reviewers set promotion_limit=25;exception when insufficient_privilege then blocked:=true;end;
+ if not blocked then raise exception 'Reviewer can edit own entitlement';end if;
+ perform set_config('request.jwt.claim.sub',current_setting('review_test.other'),true);
+ if (public.facebook_publishing_access()->>'enabled')::boolean then raise exception 'Other account inherited reviewer access';end if;
+ select count(*) into n from public.facebook_uploads;if n<>0 then raise exception 'Other account saw reviewer uploads';end if;
+end $$;
+reset role;
+rollback;
