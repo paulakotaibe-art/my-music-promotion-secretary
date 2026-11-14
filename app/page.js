@@ -1,4 +1,13 @@
+'use client';
+import {useEffect} from 'react';
+
 export default function Home() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    if (params.get('type') === 'recovery') {
+      window.location.replace('/update-password' + window.location.hash);
+    }
+  }, []);
   return (
     <main className="container">
       <section className="hero">
@@ -14,7 +23,7 @@ export default function Home() {
           Register as an artist
         </a>
 
-        <p><a href="/login">Already registered? Sign in</a> · <a href="/pricing">View plans</a></p>
+        <p><a href="/login">Already registered? Sign in</a> · <a href="/pricing">View plans</a> · <a href="/update-password">Reset app password</a></p>
 
         <a className="button" href="/dashboard">
           Go to Dashboard
